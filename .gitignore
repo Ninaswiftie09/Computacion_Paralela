@@ -45,3 +45,6 @@ Desktop.ini
 
 # macOS
 .DS_Store
+
+.exe
+.obj
