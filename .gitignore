@@ -1,0 +1,47 @@
+# Ejecutables
+*.exe
+*.out
+*.app
+
+# Archivos compilados
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+
+# Archivos de depuracion
+*.pdb
+*.ilk
+*.idb
+
+# Visual Studio
+.vs/
+Debug/
+Release/
+x64/
+x86/
+
+# VS Code
+.vscode/
+
+# CMake
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+*~
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
