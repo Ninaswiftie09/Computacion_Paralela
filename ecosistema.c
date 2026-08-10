@@ -7,6 +7,17 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#define EDAD_MAXIMA_ALGA        30
+#define EDAD_MAXIMA_CARACOL     15
+#define EDAD_MAXIMA_ANGUILA     35
+#define TICKS_MAX_SIN_COMER_CARACOL   6
+#define TICKS_MAX_SIN_COMER_ANGUILA   12
+#define COSTO_ENERGIA_METABOLICA_CARACOL  1
+#define COSTO_ENERGIA_METABOLICA_ANGUILA  1
+#define ENERGIA_GANADA_CARACOL_POR_ALGA      3
+#define ENERGIA_GANADA_ANGUILA_POR_CARACOL   7
+#define UMBRAL_REPRODUCCION_MULT_CARACOL   3
+#define UMBRAL_REPRODUCCION_MULT_ANGUILA   2
 
 /* =========================================================
  * UTILIDADES INTERNAS
@@ -23,10 +34,6 @@ static size_t indice_celda(
 }
 
 
-/*
- * Verifica que una posicion exista dentro
- * de Fondo de Bikini.
- */
 static int posicion_valida(
     const Ecosistema *eco,
     int fila,
@@ -40,10 +47,7 @@ static int posicion_valida(
 }
 
 
-/*
- * Crea el contenido correspondiente a una
- * celda que no contiene ningun organismo.
- */
+
 static Organismo organismo_vacio(void) {
 
     Organismo organismo;
@@ -63,11 +67,6 @@ static Organismo organismo_vacio(void) {
     return organismo;
 }
 
-
-/*
- * Crea un nuevo organismo y le asigna
- * automaticamente un ID unico.
- */
 static Organismo crear_organismo(
     Ecosistema *eco,
     TipoEspecie tipo
@@ -102,17 +101,6 @@ static Organismo crear_organismo(
  * GENERADOR PSEUDOALEATORIO
  * ========================================================= */
 
-/*
- * Se utiliza xorshift32.
- *
- * Es un generador pequeno y rapido que permite utilizar
- * una semilla fija.
- *
- * Gracias a esto, si usamos la misma semilla,
- * obtenemos exactamente la misma distribucion inicial.
- *
- * Esto sera especialmente util para comparar pruebas.
- */
 static uint32_t siguiente_aleatorio(
     Ecosistema *eco
 ) {
@@ -136,16 +124,6 @@ static uint32_t siguiente_aleatorio(
 /* =========================================================
  * MEZCLA DE POSICIONES
  * ========================================================= */
-
-/*
- * Fisher-Yates Shuffle
- *
- * Creamos todos los indices de la cuadricula y los
- * revolvemos.
- *
- * Esto permite colocar organismos aleatoriamente
- * sin que dos organismos ocupen la misma celda.
- */
 static void mezclar_indices(
     Ecosistema *eco,
     size_t *indices,
@@ -503,9 +481,6 @@ Configuracion configuracion_fondo_bikini(void) {
 
     /*
      * Probabilidades.
-     *
-     * Todavia no se aplican.
-     * Persona 2 implementara las reglas.
      */
     config.prob_reproduccion_alga = 0.30;
 
@@ -1527,76 +1502,1022 @@ void ecosistema_imprimir_estado(
 }
 
 
+/* =========================================================
+ * SNAPSHOT DE POSICIONES POR ESPECIE
+ * ========================================================= */
+
+static size_t recolectar_posiciones(
+    const Ecosistema *eco,
+    TipoEspecie tipo,
+    Posicion *lista
+) {
+
+    int fila;
+
+    int columna;
+
+    size_t total;
+
+
+    total = 0;
+
+
+    for (
+        fila = 0;
+        fila < eco->config.filas;
+        ++fila
+    ) {
+
+        for (
+            columna = 0;
+            columna < eco->config.columnas;
+            ++columna
+        ) {
+
+            const Celda *celda;
+
+
+            celda =
+                ecosistema_consultar_celda(
+                    eco,
+                    fila,
+                    columna
+                );
+
+
+            if (celda->organismo.tipo == tipo) {
+
+                lista[total].fila = fila;
+
+                lista[total].columna = columna;
+
+                ++total;
+            }
+        }
+    }
+
+
+    return total;
+}
+
+
+/*
+ * Fisher-Yates sobre un arreglo de Posicion.
+ */
+static void mezclar_posiciones(
+    Ecosistema *eco,
+    Posicion *lista,
+    size_t cantidad
+) {
+
+    size_t i;
+
+
+    if (cantidad < 2) {
+        return;
+    }
+
+
+    for (i = cantidad - 1; i > 0; --i) {
+
+        size_t j;
+
+        Posicion temporal;
+
+
+        j =
+            (size_t)ecosistema_aleatorio_entero(
+                eco,
+                0,
+                (int)i
+            );
+
+        temporal = lista[i];
+
+        lista[i] = lista[j];
+
+        lista[j] = temporal;
+    }
+}
+
+
+/* =========================================================
+ * mover()
+ * ========================================================= */
+static int mover(
+    Ecosistema *eco,
+    int fila,
+    int columna,
+    Posicion *nueva_posicion
+) {
+
+    Posicion vecinos_vacios[MAX_VECINOS];
+
+    int cantidad;
+
+    Posicion destino;
+
+    Celda *origen;
+
+    Celda *celda_destino;
+
+
+    if (nueva_posicion != NULL) {
+
+        nueva_posicion->fila = fila;
+
+        nueva_posicion->columna = columna;
+    }
+
+
+    cantidad =
+        ecosistema_obtener_vecinos_vacios(
+            eco,
+            fila,
+            columna,
+            vecinos_vacios
+        );
+
+
+    if (cantidad == 0) {
+
+        return 0;
+    }
+
+
+    destino =
+        vecinos_vacios[
+            ecosistema_aleatorio_entero(
+                eco,
+                0,
+                cantidad - 1
+            )
+        ];
+
+
+    origen =
+        ecosistema_acceder_celda(
+            eco,
+            fila,
+            columna
+        );
+
+    celda_destino =
+        ecosistema_acceder_celda(
+            eco,
+            destino.fila,
+            destino.columna
+        );
+
+
+    if (
+        origen == NULL ||
+        celda_destino == NULL
+    ) {
+
+        return 0;
+    }
+
+
+    celda_destino->organismo =
+        origen->organismo;
+
+    origen->organismo =
+        organismo_vacio();
+
+
+    if (nueva_posicion != NULL) {
+
+        *nueva_posicion = destino;
+    }
+
+
+    return 1;
+}
+
+
+/* =========================================================
+ * alimentar()
+ * ========================================================= */
+static int alimentar(
+    Ecosistema *eco,
+    int fila,
+    int columna,
+    TipoEspecie tipo_presa,
+    int energia_ganada,
+    Posicion *nueva_posicion
+) {
+
+    Posicion presas[MAX_VECINOS];
+
+    int cantidad;
+
+    Posicion destino;
+
+    Celda *origen;
+
+    Celda *celda_destino;
+
+    Organismo depredador;
+
+
+    if (nueva_posicion != NULL) {
+
+        nueva_posicion->fila = fila;
+
+        nueva_posicion->columna = columna;
+    }
+
+
+    cantidad =
+        ecosistema_obtener_vecinos_tipo(
+            eco,
+            fila,
+            columna,
+            tipo_presa,
+            presas
+        );
+
+
+    if (cantidad == 0) {
+
+        return 0;
+    }
+
+
+    destino =
+        presas[
+            ecosistema_aleatorio_entero(
+                eco,
+                0,
+                cantidad - 1
+            )
+        ];
+
+
+    origen =
+        ecosistema_acceder_celda(
+            eco,
+            fila,
+            columna
+        );
+
+    celda_destino =
+        ecosistema_acceder_celda(
+            eco,
+            destino.fila,
+            destino.columna
+        );
+
+
+    if (
+        origen == NULL ||
+        celda_destino == NULL
+    ) {
+
+        return 0;
+    }
+
+
+    depredador = origen->organismo;
+
+    depredador.energia += energia_ganada;
+
+    depredador.comidas += 1;
+
+    depredador.ticks_sin_comer = 0;
+
+
+    celda_destino->organismo = depredador;
+
+    origen->organismo = organismo_vacio();
+
+
+    if (nueva_posicion != NULL) {
+
+        *nueva_posicion = destino;
+    }
+
+
+    return 1;
+}
+
+
+/* =========================================================
+ * reproducir()
+ *
+ * Si el organismo en (fila, columna) tiene energia suficiente
+ * (los productores/algas no gastan energia) y se cumple la
+ * probabilidad de reproduccion, se crea un organismo hijo en
+ * una celda vecina vacia elegida al azar. El progenitor cede
+ * "energia_heredada" al hijo (las algas no pierden energia).
+ *
+ * Devuelve 1 si hubo reproduccion, 0 si no.
+ * ========================================================= */
+static int reproducir(
+    Ecosistema *eco,
+    int fila,
+    int columna,
+    double probabilidad,
+    int energia_minima,
+    int energia_heredada
+) {
+
+    Celda *origen;
+
+    Posicion vecinos_vacios[MAX_VECINOS];
+
+    int cantidad;
+
+    Posicion destino;
+
+    Celda *celda_destino;
+
+    TipoEspecie tipo_padre;
+
+
+    origen =
+        ecosistema_acceder_celda(
+            eco,
+            fila,
+            columna
+        );
+
+
+    if (
+        origen == NULL ||
+        origen->organismo.tipo == ESPECIE_VACIA
+    ) {
+
+        return 0;
+    }
+
+
+    tipo_padre = origen->organismo.tipo;
+
+
+    if (
+        tipo_padre != ESPECIE_ALGA &&
+        origen->organismo.energia < energia_minima
+    ) {
+
+        return 0;
+    }
+
+
+    if (!ecosistema_ocurre(eco, probabilidad)) {
+
+        return 0;
+    }
+
+
+    cantidad =
+        ecosistema_obtener_vecinos_vacios(
+            eco,
+            fila,
+            columna,
+            vecinos_vacios
+        );
+
+
+    if (cantidad == 0) {
+
+        return 0;
+    }
+
+
+    destino =
+        vecinos_vacios[
+            ecosistema_aleatorio_entero(
+                eco,
+                0,
+                cantidad - 1
+            )
+        ];
+
+
+    celda_destino =
+        ecosistema_acceder_celda(
+            eco,
+            destino.fila,
+            destino.columna
+        );
+
+
+    if (celda_destino == NULL) {
+
+        return 0;
+    }
+
+
+    celda_destino->organismo =
+        crear_organismo(
+            eco,
+            tipo_padre
+        );
+
+
+    /*
+     * Volvemos a pedir el puntero al origen: crear_organismo()
+     * no reubica la cuadricula, pero es una buena practica no
+     * asumir que un puntero sigue "fresco" despues de una
+     * operacion que modifico el ecosistema.
+     */
+    origen =
+        ecosistema_acceder_celda(
+            eco,
+            fila,
+            columna
+        );
+
+    if (tipo_padre != ESPECIE_ALGA) {
+
+        origen->organismo.energia -=
+            energia_heredada;
+    }
+
+
+    return 1;
+}
+
+
+/* =========================================================
+ * morir()
+ * ========================================================= */
+static int morir(
+    Ecosistema *eco,
+    int fila,
+    int columna,
+    int edad_maxima,
+    int ticks_max_sin_comer
+) {
+
+    Celda *celda;
+
+    Organismo *org;
+
+    int debe_morir;
+
+
+    celda =
+        ecosistema_acceder_celda(
+            eco,
+            fila,
+            columna
+        );
+
+
+    if (
+        celda == NULL ||
+        celda->organismo.tipo == ESPECIE_VACIA
+    ) {
+
+        return 0;
+    }
+
+
+    org = &celda->organismo;
+
+    debe_morir = 0;
+
+
+    if (
+        edad_maxima > 0 &&
+        org->edad >= edad_maxima
+    ) {
+
+        debe_morir = 1;
+    }
+
+
+    if (org->tipo != ESPECIE_ALGA) {
+
+        if (org->energia <= 0) {
+
+            debe_morir = 1;
+        }
+
+
+        if (
+            ticks_max_sin_comer > 0 &&
+            org->ticks_sin_comer >= ticks_max_sin_comer
+        ) {
+
+            debe_morir = 1;
+        }
+    }
+
+
+    if (debe_morir) {
+
+        celda->organismo = organismo_vacio();
+
+        return 1;
+    }
+
+
+    return 0;
+}
+
+
+/* =========================================================
+ * ACTUALIZAR ALGAS (PLANTAS / PRODUCTORES)
+ * ========================================================= */
 static void actualizar_algas(
     Ecosistema *eco
 ) {
 
-    /*
-     * Evita warning de parametro no utilizado
-     * mientras esta funcion aun no tiene reglas.
-     */
-    (void)eco;
+    size_t capacidad;
+
+    Posicion *snapshot;
+
+    size_t total;
+
+    size_t i;
 
 
-    /*
-     * PERSONA 2:
-     *
-     * Aqui se implementara:
-     *
-     * - crecimiento de algas;
-     * - expansion;
-     * - reproduccion segun probabilidad;
-     * - busqueda de vecinos vacios;
-     * - reglas de muerte que se definan.
-     */
+    capacidad =
+        (size_t)eco->config.filas
+        *
+        (size_t)eco->config.columnas;
+
+
+    snapshot =
+        (Posicion *)malloc(
+            capacidad * sizeof(Posicion)
+        );
+
+
+    if (snapshot == NULL) {
+
+        fprintf(
+            stderr,
+            "Error: memoria insuficiente al actualizar algas.\n"
+        );
+
+        return;
+    }
+
+
+    total =
+        recolectar_posiciones(
+            eco,
+            ESPECIE_ALGA,
+            snapshot
+        );
+
+    mezclar_posiciones(
+        eco,
+        snapshot,
+        total
+    );
+
+
+    for (i = 0; i < total; ++i) {
+
+        Posicion p;
+
+        Celda *celda;
+
+
+        p = snapshot[i];
+
+        celda =
+            ecosistema_acceder_celda(
+                eco,
+                p.fila,
+                p.columna
+            );
+
+
+        /*
+         * Verificacion defensiva: por el diseno del snapshot
+         * esto siempre deberia ser cierto, pero se valida por
+         * las dudas.
+         */
+        if (
+            celda == NULL ||
+            celda->organismo.tipo != ESPECIE_ALGA
+        ) {
+
+            continue;
+        }
+
+
+        celda->organismo.edad += 1;
+
+
+        if (
+            morir(
+                eco,
+                p.fila,
+                p.columna,
+                EDAD_MAXIMA_ALGA,
+                0
+            )
+        ) {
+
+            continue;
+        }
+
+
+        reproducir(
+            eco,
+            p.fila,
+            p.columna,
+            eco->config.prob_reproduccion_alga,
+            0,
+            0
+        );
+    }
+
+
+    free(snapshot);
 }
 
 
+/* =========================================================
+ * ACTUALIZAR CARACOLES (HERBIVOROS)
+ *
+ * Regla por tick, en orden: envejecer; intentar comer un
+ * alga vecina (alimentar); si no hay alga cerca, moverse a
+ * una celda vacia (mover); pagar costo metabolico; morir si
+ * corresponde por hambre, vejez o energia agotada; si
+ * sobrevive, intentar reproducirse hacia una celda vacia.
+ * ========================================================= */
 static void actualizar_caracoles(
     Ecosistema *eco
 ) {
 
-    (void)eco;
+    size_t capacidad;
+
+    Posicion *snapshot;
+
+    size_t total;
+
+    size_t i;
 
 
-    /*
-     * PERSONA 2:
-     *
-     * Aqui se implementara:
-     *
-     * - buscar algas cercanas;
-     * - movimiento;
-     * - consumir algas;
-     * - energia;
-     * - hambre;
-     * - edad;
-     * - reproduccion;
-     * - muerte.
-     */
+    capacidad =
+        (size_t)eco->config.filas
+        *
+        (size_t)eco->config.columnas;
+
+
+    snapshot =
+        (Posicion *)malloc(
+            capacidad * sizeof(Posicion)
+        );
+
+
+    if (snapshot == NULL) {
+
+        fprintf(
+            stderr,
+            "Error: memoria insuficiente al actualizar caracoles.\n"
+        );
+
+        return;
+    }
+
+
+    total =
+        recolectar_posiciones(
+            eco,
+            ESPECIE_CARACOL,
+            snapshot
+        );
+
+    mezclar_posiciones(
+        eco,
+        snapshot,
+        total
+    );
+
+
+    for (i = 0; i < total; ++i) {
+
+        Posicion p;
+
+        Celda *celda;
+
+        int comio;
+
+
+        p = snapshot[i];
+
+        celda =
+            ecosistema_acceder_celda(
+                eco,
+                p.fila,
+                p.columna
+            );
+
+
+        if (
+            celda == NULL ||
+            celda->organismo.tipo != ESPECIE_CARACOL
+        ) {
+
+            continue;
+        }
+
+
+        celda->organismo.edad += 1;
+
+
+        /*
+         * alimentar(): busca un alga vecina. Si come, la
+         * posicion "p" se actualiza a la celda de la presa.
+         */
+        comio =
+            alimentar(
+                eco,
+                p.fila,
+                p.columna,
+                ESPECIE_ALGA,
+                ENERGIA_GANADA_CARACOL_POR_ALGA,
+                &p
+            );
+
+
+        /*
+         * mover(): si no encontro comida, explora la
+         * cuadricula moviendose a una celda vacia.
+         */
+        if (!comio) {
+
+            mover(
+                eco,
+                p.fila,
+                p.columna,
+                &p
+            );
+        }
+
+
+        celda =
+            ecosistema_acceder_celda(
+                eco,
+                p.fila,
+                p.columna
+            );
+
+
+        if (!comio) {
+
+            celda->organismo.ticks_sin_comer += 1;
+        }
+
+
+        celda->organismo.energia -=
+            COSTO_ENERGIA_METABOLICA_CARACOL;
+
+
+        if (
+            morir(
+                eco,
+                p.fila,
+                p.columna,
+                EDAD_MAXIMA_CARACOL,
+                TICKS_MAX_SIN_COMER_CARACOL
+            )
+        ) {
+
+            continue;
+        }
+
+
+        reproducir(
+            eco,
+            p.fila,
+            p.columna,
+            eco->config.prob_reproduccion_caracol,
+            eco->config.energia_inicial_caracol * UMBRAL_REPRODUCCION_MULT_CARACOL,
+            eco->config.energia_inicial_caracol
+        );
+    }
+
+
+    free(snapshot);
 }
 
 
+/* =========================================================
+ * ACTUALIZAR ANGUILAS
+ * ========================================================= */
 static void actualizar_anguilas(
     Ecosistema *eco
 ) {
 
-    (void)eco;
+    size_t capacidad;
+
+    Posicion *snapshot;
+
+    size_t total;
+
+    size_t i;
 
 
-    /*
-     * PERSONA 2:
-     *
-     * Aqui se implementara:
-     *
-     * - buscar caracoles cercanos;
-     * - movimiento;
-     * - depredacion;
-     * - energia;
-     * - hambre;
-     * - edad;
-     * - reproduccion;
-     * - muerte.
-     */
+    capacidad =
+        (size_t)eco->config.filas
+        *
+        (size_t)eco->config.columnas;
+
+
+    snapshot =
+        (Posicion *)malloc(
+            capacidad * sizeof(Posicion)
+        );
+
+
+    if (snapshot == NULL) {
+
+        fprintf(
+            stderr,
+            "Error: memoria insuficiente al actualizar anguilas.\n"
+        );
+
+        return;
+    }
+
+
+    total =
+        recolectar_posiciones(
+            eco,
+            ESPECIE_ANGUILA,
+            snapshot
+        );
+
+    mezclar_posiciones(
+        eco,
+        snapshot,
+        total
+    );
+
+
+    for (i = 0; i < total; ++i) {
+
+        Posicion p;
+
+        Celda *celda;
+
+        int comio;
+
+
+        p = snapshot[i];
+
+        celda =
+            ecosistema_acceder_celda(
+                eco,
+                p.fila,
+                p.columna
+            );
+
+
+        if (
+            celda == NULL ||
+            celda->organismo.tipo != ESPECIE_ANGUILA
+        ) {
+
+            continue;
+        }
+
+
+        celda->organismo.edad += 1;
+
+
+        comio =
+            alimentar(
+                eco,
+                p.fila,
+                p.columna,
+                ESPECIE_CARACOL,
+                ENERGIA_GANADA_ANGUILA_POR_CARACOL,
+                &p
+            );
+
+
+        if (!comio) {
+
+            mover(
+                eco,
+                p.fila,
+                p.columna,
+                &p
+            );
+        }
+
+
+        celda =
+            ecosistema_acceder_celda(
+                eco,
+                p.fila,
+                p.columna
+            );
+
+
+        if (!comio) {
+
+            celda->organismo.ticks_sin_comer += 1;
+        }
+
+
+        celda->organismo.energia -=
+            COSTO_ENERGIA_METABOLICA_ANGUILA;
+
+
+        if (
+            morir(
+                eco,
+                p.fila,
+                p.columna,
+                EDAD_MAXIMA_ANGUILA,
+                TICKS_MAX_SIN_COMER_ANGUILA
+            )
+        ) {
+
+            continue;
+        }
+
+
+        reproducir(
+            eco,
+            p.fila,
+            p.columna,
+            eco->config.prob_reproduccion_anguila,
+            eco->config.energia_inicial_anguila * UMBRAL_REPRODUCCION_MULT_ANGUILA,
+            eco->config.energia_inicial_anguila
+        );
+    }
+
+
+    free(snapshot);
+}
+
+
+/* =========================================================
+ * VALIDACION DE COHERENCIA
+ * ========================================================= */
+static void validar_coherencia_cuadricula(
+    const Ecosistema *eco
+) {
+
+    size_t capacidad;
+
+    size_t i;
+
+
+    capacidad =
+        (size_t)eco->config.filas
+        *
+        (size_t)eco->config.columnas;
+
+
+    for (i = 0; i < capacidad; ++i) {
+
+        const Organismo *org;
+
+
+        org = &eco->celdas[i].organismo;
+
+
+        if (org->tipo == ESPECIE_VACIA) {
+
+            if (
+                org->energia != 0 ||
+                org->edad != 0 ||
+                org->comidas != 0 ||
+                org->ticks_sin_comer != 0 ||
+                org->id != 0
+            ) {
+
+                fprintf(
+                    stderr,
+                    "Advertencia: celda vacia con datos "
+                    "residuales en el indice %zu.\n",
+                    i
+                );
+            }
+
+            continue;
+        }
+
+
+        if (
+            org->tipo != ESPECIE_ALGA &&
+            org->energia < 0
+        ) {
+
+            fprintf(
+                stderr,
+                "Advertencia: organismo id=%llu con "
+                "energia negativa (%d).\n",
+                (unsigned long long)org->id,
+                org->energia
+            );
+        }
+    }
 }
 
 
@@ -1621,6 +2542,11 @@ static void ejecutar_tick(
 
 
     actualizar_anguilas(
+        eco
+    );
+
+
+    validar_coherencia_cuadricula(
         eco
     );
 }
