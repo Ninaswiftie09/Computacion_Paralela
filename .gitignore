@@ -23,15 +23,19 @@ x64/
 x86/
 
 # VS Code
-.vscode/
+# Se versiona tasks.json para que cualquiera pueda compilar y
+# ejecutar el proyecto desde la interfaz, sin usar la terminal.
+.vscode/*
+!.vscode/tasks.json
 
 # CMake
+# (El Makefile del proyecto SI se versiona: es el build system
+#  oficial y forma parte de las instrucciones de ejecucion.)
 build/
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
-Makefile
 
 # Archivos temporales
 *.tmp

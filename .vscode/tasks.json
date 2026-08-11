@@ -1,0 +1,82 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "1. Compilar (paralelo + secuencial)",
+            "type": "shell",
+            "command": "make",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$gcc",
+            "detail": "Genera ecosistema_paralelo y ecosistema_secuencial"
+        },
+        {
+            "label": "2. Ejecutar simulacion (por defecto)",
+            "type": "shell",
+            "command": "./ecosistema_paralelo.exe",
+            "dependsOn": "1. Compilar (paralelo + secuencial)",
+            "problemMatcher": [],
+            "detail": "Cuadricula 12x24, 10 ticks, modo secuencial"
+        },
+        {
+            "label": "3. Ejecutar en paralelo (8 hilos)",
+            "type": "shell",
+            "command": "./ecosistema_paralelo.exe",
+            "args": [
+                "--filas", "64",
+                "--columnas", "64",
+                "--ticks", "30",
+                "--cada", "10",
+                "--modo", "paralelo",
+                "--hilos", "8",
+                "--validar"
+            ],
+            "dependsOn": "1. Compilar (paralelo + secuencial)",
+            "problemMatcher": [],
+            "detail": "Cuadricula 64x64 donde las tres especies coexisten"
+        },
+        {
+            "label": "4. Generar archivo de resultados",
+            "type": "shell",
+            "command": "make",
+            "args": ["resultados"],
+            "problemMatcher": [],
+            "detail": "Escribe resultados/resultados.txt y resultados_paralelo.txt"
+        },
+        {
+            "label": "5. Benchmark (speedup y eficiencia)",
+            "type": "shell",
+            "command": "make",
+            "args": ["bench"],
+            "problemMatcher": [],
+            "detail": "Tarda varios minutos. Escribe resultados/benchmark.csv"
+        },
+        {
+            "label": "6. Verificar race conditions",
+            "type": "shell",
+            "command": "make",
+            "args": ["verificar"],
+            "problemMatcher": [],
+            "detail": "44 corridas con 2, 4, 8 y 16 hilos revisando invariantes"
+        },
+        {
+            "label": "7. Ver todas las opciones",
+            "type": "shell",
+            "command": "./ecosistema_paralelo.exe",
+            "args": ["--ayuda"],
+            "dependsOn": "1. Compilar (paralelo + secuencial)",
+            "problemMatcher": [],
+            "detail": "Imprime la ayuda de la linea de comandos"
+        },
+        {
+            "label": "8. Limpiar binarios",
+            "type": "shell",
+            "command": "make",
+            "args": ["clean"],
+            "problemMatcher": [],
+            "detail": "Borra los ejecutables generados"
+        }
+    ]
+}
