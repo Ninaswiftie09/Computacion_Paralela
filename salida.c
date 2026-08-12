@@ -31,63 +31,6 @@
 #define COLUMNAS_VENTANA            64
 
 
-/* Directorio del ejecutable, para encontrar bob.txt */
-static char g_directorio_programa[MAX_RUTA_ARCHIVO] = "";
-
-
-void ecosistema_definir_ruta_programa(
-    const char *argv0
-) {
-
-    size_t largo;
-
-    size_t i;
-
-    size_t corte;
-
-
-    if (argv0 == NULL) {
-
-        return;
-    }
-
-
-    largo = strlen(argv0);
-
-    corte = 0;
-
-
-    for (i = 0; i < largo; ++i) {
-
-        if (
-            argv0[i] == '/' ||
-            argv0[i] == '\\'
-        ) {
-
-            corte = i + 1;
-        }
-    }
-
-
-    if (
-        corte == 0 ||
-        corte >= MAX_RUTA_ARCHIVO
-    ) {
-
-        return;
-    }
-
-
-    memcpy(
-        g_directorio_programa,
-        argv0,
-        corte
-    );
-
-    g_directorio_programa[corte] = '\0';
-}
-
-
 /* =========================================================
  * DIRECTORIOS
  * ========================================================= */
@@ -101,8 +44,6 @@ int ecosistema_asegurar_directorio(
     size_t largo;
 
     size_t i;
-
-    size_t corte;
 
 
     if (ruta_archivo == NULL) {
@@ -119,39 +60,43 @@ int ecosistema_asegurar_directorio(
     }
 
 
-    corte = 0;
-
+    /*
+     * Se recorre la ruta creando cada nivel intermedio, no
+     * solo el ultimo: con "a/b/c.txt" hay que crear "a" antes
+     * de poder crear "a/b".
+     *
+     * Si un nivel ya existe, CREAR_DIRECTORIO falla y no pasa
+     * nada: lo que importa es que exista al terminar.
+     */
     for (i = 0; i < largo; ++i) {
 
         if (
-            ruta_archivo[i] == '/' ||
-            ruta_archivo[i] == '\\'
+            ruta_archivo[i] != '/' &&
+            ruta_archivo[i] != '\\'
         ) {
 
-            corte = i;
+            continue;
         }
+
+
+        /*
+         * Una barra en la posicion cero es una ruta absoluta
+         * de estilo POSIX: no hay nada que crear ahi.
+         */
+        if (i == 0) {
+
+            continue;
+        }
+
+
+        memcpy(carpeta, ruta_archivo, i);
+
+        carpeta[i] = '\0';
+
+
+        CREAR_DIRECTORIO(carpeta);
     }
 
-
-    /*
-     * Sin separador, el archivo va en el directorio actual.
-     */
-    if (corte == 0) {
-
-        return 1;
-    }
-
-
-    memcpy(carpeta, ruta_archivo, corte);
-
-    carpeta[corte] = '\0';
-
-
-    /*
-     * Si ya existe, CREAR_DIRECTORIO falla y no pasa nada:
-     * lo que importa es que exista despues de esta llamada.
-     */
-    CREAR_DIRECTORIO(carpeta);
 
     return 1;
 }
@@ -160,86 +105,6 @@ int ecosistema_asegurar_directorio(
 /* =========================================================
  * PRESENTACION
  * ========================================================= */
-
-static FILE *abrir_bob(void) {
-
-    FILE *archivo;
-
-    char ruta[MAX_RUTA_ARCHIVO];
-
-
-    archivo = fopen("bob.txt", "r");
-
-
-    if (archivo != NULL) {
-
-        return archivo;
-    }
-
-
-    /*
-     * Segundo intento: junto al ejecutable, para que la
-     * simulacion se pueda lanzar desde cualquier directorio.
-     */
-    if (g_directorio_programa[0] == '\0') {
-
-        return NULL;
-    }
-
-
-    if (
-        strlen(g_directorio_programa) + strlen("bob.txt")
-        >= MAX_RUTA_ARCHIVO
-    ) {
-
-        return NULL;
-    }
-
-
-    strcpy(ruta, g_directorio_programa);
-
-    strcat(ruta, "bob.txt");
-
-
-    return fopen(ruta, "r");
-}
-
-
-static void reportar_bob_esponja(
-    FILE *destino
-) {
-
-    FILE *archivo;
-
-    char linea[4096];
-
-
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-#endif
-
-    archivo = abrir_bob();
-
-    if (archivo == NULL)
-    {
-        fprintf(destino, "\n");
-        fprintf(destino, "          FONDO DE BIKINI\n");
-        fprintf(destino, "  Bob Esponja no pudo salir de su pina :(\n");
-        fprintf(destino, "\n");
-
-        return;
-    }
-
-    while (fgets(linea, sizeof(linea), archivo) != NULL)
-    {
-        fprintf(destino, "%s", linea);
-    }
-
-    fclose(archivo);
-
-    fprintf(destino, "\n");
-}
-
 
 void ecosistema_reportar_presentacion(
     FILE *destino
@@ -251,30 +116,23 @@ void ecosistema_reportar_presentacion(
     }
 
 
-    reportar_bob_esponja(destino);
-
     fprintf(destino, "\n");
     fprintf(destino, "============================================================\n");
-    fprintf(destino, "       FONDO DE BIKINI - SIMULACION DE ECOSISTEMA\n");
-    fprintf(destino, "            Simulacion paralela con OpenMP\n");
+    fprintf(destino, "          SIMULACION DE ECOSISTEMA CON OpenMP\n");
     fprintf(destino, "============================================================\n");
 
     fprintf(destino, "\n");
-    fprintf(destino, " Bob Esponja te da la bienvenida al experimento.\n");
-
-    fprintf(destino, "\n");
-    fprintf(destino, " HABITANTES DEL ECOSISTEMA\n");
+    fprintf(destino, " ESPECIES\n");
     fprintf(destino, " -----------------------------------------------------------\n");
-    fprintf(destino, " A  Alga       -> Planta / productor\n");
-    fprintf(destino, " G  Gary       -> Caracol herbivoro\n");
-    fprintf(destino, " E  Anguila    -> Carnivoro / depredador\n");
-    fprintf(destino, " .  Agua       -> Espacio disponible\n");
+    fprintf(destino, " P  Planta      Productor\n");
+    fprintf(destino, " H  Herbivoro   Consumidor primario\n");
+    fprintf(destino, " C  Carnivoro   Depredador\n");
+    fprintf(destino, " .  Vacio       Espacio disponible\n");
 
     fprintf(destino, "\n");
     fprintf(destino, " Cadena alimenticia:\n");
     fprintf(destino, "\n");
-    fprintf(destino, "          ALGA  --->  GARY  --->  ANGUILA\n");
-    fprintf(destino, "        productor   herbivoro    carnivoro\n");
+    fprintf(destino, "     PLANTA  -->  HERBIVORO  -->  CARNIVORO\n");
 
     fprintf(destino, "\n");
     fprintf(destino, "============================================================\n");
@@ -329,21 +187,21 @@ void ecosistema_reportar_configuracion(
 
     fprintf(
         destino,
-        "Algas iniciales        : %d\n",
+        "Plantas iniciales      : %d\n",
         eco->config.algas_iniciales
     );
 
 
     fprintf(
         destino,
-        "Caracoles iniciales    : %d\n",
+        "Herbivoros iniciales   : %d\n",
         eco->config.caracoles_iniciales
     );
 
 
     fprintf(
         destino,
-        "Anguilas iniciales     : %d\n",
+        "Carnivoros iniciales   : %d\n",
         eco->config.anguilas_iniciales
     );
 
@@ -364,7 +222,7 @@ void ecosistema_reportar_configuracion(
 
     fprintf(
         destino,
-        "Prob. reproduccion A   : %.0f%%\n",
+        "Prob. repr. plantas    : %.0f%%\n",
         eco->config.prob_reproduccion_alga
         *
         100.0
@@ -373,7 +231,7 @@ void ecosistema_reportar_configuracion(
 
     fprintf(
         destino,
-        "Prob. reproduccion G   : %.0f%%\n",
+        "Prob. repr. herbivoros : %.0f%%\n",
         eco->config.prob_reproduccion_caracol
         *
         100.0
@@ -382,7 +240,7 @@ void ecosistema_reportar_configuracion(
 
     fprintf(
         destino,
-        "Prob. reproduccion E   : %.0f%%\n",
+        "Prob. repr. carnivoros : %.0f%%\n",
         eco->config.prob_reproduccion_anguila
         *
         100.0
@@ -660,21 +518,21 @@ void ecosistema_reportar_estado(
 
     fprintf(
         destino,
-        " Plantas     (algas)     : %d\n",
+        " Plantas                 : %d\n",
         poblacion.algas
     );
 
 
     fprintf(
         destino,
-        " Herbivoros  (caracoles) : %d\n",
+        " Herbivoros              : %d\n",
         poblacion.caracoles
     );
 
 
     fprintf(
         destino,
-        " Carnivoros  (anguilas)  : %d\n",
+        " Carnivoros              : %d\n",
         poblacion.anguilas
     );
 

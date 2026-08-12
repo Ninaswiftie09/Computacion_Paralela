@@ -1,23 +1,8 @@
-# =========================================================
-# Simulacion de ecosistema con OpenMP
-#
-#   make                -> compila las dos versiones
-#   make paralelo       -> solo la version con OpenMP
-#   make secuencial     -> solo la version de un hilo
-#   make resultados     -> genera el archivo de resultados
-#   make bench          -> barrido de rendimiento (CSV)
-#   make verificar      -> busca race conditions
-#   make clean          -> borra binarios y salidas
-#
-# Las recetas no usan bucles ni utilidades de shell, para que
-# funcionen igual con cmd.exe, PowerShell o una shell POSIX.
-# =========================================================
-
 CC       = gcc
 CFLAGS   = -O2 -Wall -Wextra -std=c11
 OMPFLAGS = -fopenmp
 
-FUENTES   = ecosistema.c reglas.c salida.c cli.c benchmark.c main.c
+FUENTES   = ecosistema.c reglas.c salida.c cli.c benchmark.c visor.c main.c
 CABECERAS = ecosistema.h interno.h
 
 ifeq ($(OS),Windows_NT)
@@ -36,7 +21,7 @@ SECUENCIAL = ecosistema_secuencial$(EXE)
 DIR_RESULTADOS = resultados
 
 
-.PHONY: all paralelo secuencial resultados bench verificar clean
+.PHONY: all paralelo secuencial resultados visor visor-colapso bench verificar clean
 
 all: paralelo secuencial
 
@@ -64,6 +49,18 @@ resultados: $(PARALELO)
 	$(RUN)$(PARALELO) --ticks 20 --cada 5 --simbolos pdf --sin-presentacion --quiet --salida $(DIR_RESULTADOS)/resultados.txt
 	$(RUN)$(PARALELO) --filas 64 --columnas 64 --ticks 30 --cada 10 --modo paralelo --hilos 8 --simbolos pdf --sin-presentacion --quiet --validar --salida $(DIR_RESULTADOS)/resultados_paralelo.txt
 	@echo Resultados generados en $(DIR_RESULTADOS)
+
+
+# Visor grafico con pygame. El binario solo exporta los cuadros y
+# visor.py los reproduce. Requiere: pip install pygame
+visor: $(PARALELO)
+	python visor.py --filas 64 --ticks 300 --modo paralelo --hilos 8
+
+
+# El mismo visor sobre un escenario que termina con el
+# ecosistema extinto.
+visor-colapso: $(PARALELO)
+	python visor.py --colapso
 
 
 # Los 20 ticks son los que documenta docs/RESULTADOS.md: hay que

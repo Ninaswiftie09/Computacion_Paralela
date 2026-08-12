@@ -1,25 +1,25 @@
 
 CONFIGURACION DEL ECOSISTEMA
 ------------------------------------------------------------
-Nombre                 : Fondo de Bikini
+Nombre                 : Ecosistema
 Cuadricula             : 12 x 24  (288 celdas)
-Algas iniciales        : 78
-Caracoles iniciales    : 20
-Anguilas iniciales     : 7
+Plantas iniciales      : 78
+Herbivoros iniciales   : 20
+Carnivoros iniciales   : 7
 Numero de ticks        : 20
 Semilla                : 20260809
-Prob. reproduccion A   : 30%
-Prob. reproduccion G   : 20%
-Prob. reproduccion E   : 12%
+Prob. repr. plantas    : 30%
+Prob. repr. herbivoros : 20%
+Prob. repr. carnivoros : 12%
 Modo de ejecucion      : secuencial
 ------------------------------------------------------------
 
 ============================================================
- ESTADO INICIAL - Fondo de Bikini
+ ESTADO INICIAL - Ecosistema
 ============================================================
- Plantas     (algas)     : 78
- Herbivoros  (caracoles) : 20
- Carnivoros  (anguilas)  : 7
+ Plantas                 : 78
+ Herbivoros              : 20
+ Carnivoros              : 7
  Celdas vacias           : 183
 
  Distribucion  (P plantas, H herbivoros, C carnivoros):
@@ -41,11 +41,11 @@ Modo de ejecucion      : secuencial
     +------------------------------------------------+
 
 ============================================================
- TICK 5 - Fondo de Bikini
+ TICK 5 - Ecosistema
 ============================================================
- Plantas     (algas)     : 127
- Herbivoros  (caracoles) : 9
- Carnivoros  (anguilas)  : 9
+ Plantas                 : 127
+ Herbivoros              : 9
+ Carnivoros              : 9
  Celdas vacias           : 143
 
  Distribucion  (P plantas, H herbivoros, C carnivoros):
@@ -67,11 +67,11 @@ Modo de ejecucion      : secuencial
     +------------------------------------------------+
 
 ============================================================
- TICK 10 - Fondo de Bikini
+ TICK 10 - Ecosistema
 ============================================================
- Plantas     (algas)     : 171
- Herbivoros  (caracoles) : 7
- Carnivoros  (anguilas)  : 7
+ Plantas                 : 171
+ Herbivoros              : 7
+ Carnivoros              : 7
  Celdas vacias           : 103
 
  Distribucion  (P plantas, H herbivoros, C carnivoros):
@@ -93,11 +93,11 @@ Modo de ejecucion      : secuencial
     +------------------------------------------------+
 
 ============================================================
- TICK 15 - Fondo de Bikini
+ TICK 15 - Ecosistema
 ============================================================
- Plantas     (algas)     : 212
- Herbivoros  (caracoles) : 7
- Carnivoros  (anguilas)  : 4
+ Plantas                 : 212
+ Herbivoros              : 7
+ Carnivoros              : 4
  Celdas vacias           : 65
 
  Distribucion  (P plantas, H herbivoros, C carnivoros):
@@ -119,11 +119,11 @@ Modo de ejecucion      : secuencial
     +------------------------------------------------+
 
 ============================================================
- TICK 20 - Fondo de Bikini
+ TICK 20 - Ecosistema
 ============================================================
- Plantas     (algas)     : 230
- Herbivoros  (caracoles) : 12
- Carnivoros  (anguilas)  : 2
+ Plantas                 : 230
+ Herbivoros              : 12
+ Carnivoros              : 2
  Celdas vacias           : 44
 
  Distribucion  (P plantas, H herbivoros, C carnivoros):

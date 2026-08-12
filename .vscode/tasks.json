@@ -25,12 +25,18 @@
             "type": "shell",
             "command": "./ecosistema_paralelo.exe",
             "args": [
-                "--filas", "64",
-                "--columnas", "64",
-                "--ticks", "30",
-                "--cada", "10",
-                "--modo", "paralelo",
-                "--hilos", "8",
+                "--filas",
+                "64",
+                "--columnas",
+                "64",
+                "--ticks",
+                "30",
+                "--cada",
+                "10",
+                "--modo",
+                "paralelo",
+                "--hilos",
+                "8",
                 "--validar"
             ],
             "dependsOn": "1. Compilar (paralelo + secuencial)",
@@ -38,43 +44,84 @@
             "detail": "Cuadricula 64x64 donde las tres especies coexisten"
         },
         {
-            "label": "4. Generar archivo de resultados",
+            "label": "4. Ver la simulacion (pygame)",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "visor.py",
+                "--filas",
+                "64",
+                "--ticks",
+                "300",
+                "--modo",
+                "paralelo",
+                "--hilos",
+                "8"
+            ],
+            "problemMatcher": [],
+            "detail": "Abre el visor grafico. Requiere: pip install pygame",
+            "dependsOn": "1. Compilar (paralelo + secuencial)"
+        },
+        {
+            "label": "5. Ver el colapso del ecosistema (pygame)",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "visor.py",
+                "--colapso"
+            ],
+            "dependsOn": "1. Compilar (paralelo + secuencial)",
+            "problemMatcher": [],
+            "detail": "Escenario que corre hasta que no queda ningun organismo vivo"
+        },
+        {
+            "label": "6. Generar archivo de resultados",
             "type": "shell",
             "command": "make",
-            "args": ["resultados"],
+            "args": [
+                "resultados"
+            ],
             "problemMatcher": [],
             "detail": "Escribe resultados/resultados.txt y resultados_paralelo.txt"
         },
         {
-            "label": "5. Benchmark (speedup y eficiencia)",
+            "label": "7. Benchmark (speedup y eficiencia)",
             "type": "shell",
             "command": "make",
-            "args": ["bench"],
+            "args": [
+                "bench"
+            ],
             "problemMatcher": [],
             "detail": "Tarda varios minutos. Escribe resultados/benchmark.csv"
         },
         {
-            "label": "6. Verificar race conditions",
+            "label": "8. Verificar race conditions",
             "type": "shell",
             "command": "make",
-            "args": ["verificar"],
+            "args": [
+                "verificar"
+            ],
             "problemMatcher": [],
             "detail": "44 corridas con 2, 4, 8 y 16 hilos revisando invariantes"
         },
         {
-            "label": "7. Ver todas las opciones",
+            "label": "9. Ver todas las opciones",
             "type": "shell",
             "command": "./ecosistema_paralelo.exe",
-            "args": ["--ayuda"],
+            "args": [
+                "--ayuda"
+            ],
             "dependsOn": "1. Compilar (paralelo + secuencial)",
             "problemMatcher": [],
             "detail": "Imprime la ayuda de la linea de comandos"
         },
         {
-            "label": "8. Limpiar binarios",
+            "label": "10. Limpiar binarios",
             "type": "shell",
             "command": "make",
-            "args": ["clean"],
+            "args": [
+                "clean"
+            ],
             "problemMatcher": [],
             "detail": "Borra los ejecutables generados"
         }

@@ -599,7 +599,7 @@ Configuracion configuracion_fondo_bikini(void) {
 
     strcpy(
         config.nombre,
-        "Fondo de Bikini"
+        "Ecosistema"
     );
 
 
@@ -687,9 +687,16 @@ Configuracion configuracion_fondo_bikini(void) {
 
     config.ticks_por_reporte = 1;
 
-    config.simbolos = SIMBOLOS_FONDO_BIKINI;
+    /*
+     * Por defecto se usa la notacion del enunciado (P, H, C).
+     * Los simbolos tematicos quedan disponibles con
+     * --simbolos bikini.
+     */
+    config.simbolos = SIMBOLOS_PDF;
 
     config.ruta_resultados[0] = '\0';
+
+    config.ruta_exportacion[0] = '\0';
 
 
     config.validar_cada_tick = 0;
@@ -727,6 +734,18 @@ void configuracion_aplicar_densidades(
         (double)config->filas
         *
         (double)config->columnas;
+
+
+    /*
+     * Convertir un double mayor que INT_MAX a int es
+     * comportamiento indefinido, asi que se recorta antes.
+     * A esta escala la reserva de memoria ya habria fallado,
+     * pero conviene no depender de eso.
+     */
+    if (capacidad > 2.0e9) {
+
+        capacidad = 2.0e9;
+    }
 
 
     config->algas_iniciales =

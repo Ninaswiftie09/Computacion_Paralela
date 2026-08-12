@@ -1465,6 +1465,25 @@ static void configurar_hilos(
 
         if (eco->config.num_hilos > 0) {
 
+            /*
+             * Pedir mas hilos que procesadores no acelera
+             * nada: solo agrega cambios de contexto. Se
+             * permite (sirve para el analisis) pero se avisa.
+             */
+            if (eco->config.num_hilos > omp_get_num_procs()) {
+
+                fprintf(
+                    stderr,
+                    "Advertencia: se pidieron %d hilos pero solo hay %d "
+                    "procesadores.\n"
+                    "             Los tiempos van a empeorar por "
+                    "sobresuscripcion.\n",
+                    eco->config.num_hilos,
+                    omp_get_num_procs()
+                );
+            }
+
+
             omp_set_num_threads(
                 eco->config.num_hilos
             );
