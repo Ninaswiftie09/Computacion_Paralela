@@ -1,0 +1,157 @@
+
+CONFIGURACION DEL ECOSISTEMA
+------------------------------------------------------------
+Nombre                 : Fondo de Bikini
+Cuadricula             : 12 x 24  (288 celdas)
+Algas iniciales        : 78
+Caracoles iniciales    : 20
+Anguilas iniciales     : 7
+Numero de ticks        : 20
+Semilla                : 20260809
+Prob. reproduccion A   : 30%
+Prob. reproduccion G   : 20%
+Prob. reproduccion E   : 12%
+Modo de ejecucion      : secuencial
+------------------------------------------------------------
+
+============================================================
+ ESTADO INICIAL - Fondo de Bikini
+============================================================
+ Plantas     (algas)     : 78
+ Herbivoros  (caracoles) : 20
+ Carnivoros  (anguilas)  : 7
+ Celdas vacias           : 183
+
+ Distribucion  (P plantas, H herbivoros, C carnivoros):
+
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 
+    +------------------------------------------------+
+  0 |. . P . . . . . . H C P . . . . H . . P . P . P |
+  1 |. . . . P P . . P P P C P P P . P P . . . . H . |
+  2 |. . H P . H . P . P P . . P P P . . P . . P . H |
+  3 |P H . P . . . P H . . . P . . . . . . P P . C P |
+  4 |P . H . H P . . P . . . . . . . H . . . . . . . |
+  5 |P . . . H . . . H H . . . P . P . . C P P P . . |
+  6 |. . . C . P P . P . . . . . P P P . . P P . P P |
+  7 |. . . . . H C . . . . P H P . . . P C . P . . . |
+  8 |. . . . . . . P P P . . . . . . P . . P . . . P |
+  9 |. . H . P P . . . . H . H . . . . . . P P . P . |
+ 10 |. . . . P P . P . . . . . . . P P . P . . . . P |
+ 11 |. H P . . . P P . . . . P P . . . P . . . . . . |
+    +------------------------------------------------+
+
+============================================================
+ TICK 5 - Fondo de Bikini
+============================================================
+ Plantas     (algas)     : 127
+ Herbivoros  (caracoles) : 9
+ Carnivoros  (anguilas)  : 9
+ Celdas vacias           : 143
+
+ Distribucion  (P plantas, H herbivoros, C carnivoros):
+
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 
+    +------------------------------------------------+
+  0 |. . H . . . . C . P P P P P P P P . P P C . P P |
+  1 |. . . . C H . . . P P C P P P P P . P P . . . . |
+  2 |. . . . . . . . P P P P P P P P P . . P C . . . |
+  3 |. . . . . . . . P P P P P P P P . C . P P . . . |
+  4 |. . . . . C . . . . . P P P P . P C . . P P . . |
+  5 |. . P . . . . . . . . H . P P H P P . P P P P P |
+  6 |. P P . . . . . . . . . P P P . P . C P P . P P |
+  7 |H . . . . . . . . . . . . P P P P P P P P P P P |
+  8 |P P . . . . . P . . . . . . P P P P P P P . P P |
+  9 |. H . P P P P . . H . . . P . . . P P P P P P P |
+ 10 |. . . . P P P P H . . . H P . P P P P P P P P P |
+ 11 |. . . . P . P . P . P . . . . P P P P P . . P . |
+    +------------------------------------------------+
+
+============================================================
+ TICK 10 - Fondo de Bikini
+============================================================
+ Plantas     (algas)     : 171
+ Herbivoros  (caracoles) : 7
+ Carnivoros  (anguilas)  : 7
+ Celdas vacias           : 103
+
+ Distribucion  (P plantas, H herbivoros, C carnivoros):
+
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 
+    +------------------------------------------------+
+  0 |. . C C C . . . P P P . P . P . P P . P P P P P |
+  1 |. . . . . . P P P P P P P P P P P P P P . P C P |
+  2 |. . . . . . P P P P P P P P . P . P . P P P P P |
+  3 |. P . . . . P P P P P P . P P P P P P P . P P P |
+  4 |P . . . . . . . P P P H P H . P . P C P P P P . |
+  5 |P P . . . . . . P . P P P P P P P P P P P P P P |
+  6 |. . P C . . P . . P P P P P P P P P P P P P P P |
+  7 |. . . . . P . P . . P P P P H . P P P P P P . P |
+  8 |H . C . P H . P . . P P P P H P P P . P P P P P |
+  9 |. . . P P P P . H . . . . . P P P P P P . P . P |
+ 10 |. . P P P P P . . . . . . . P P . P P P P P P P |
+ 11 |. . . P . P P P . . . . . P . P P P P P P . P P |
+    +------------------------------------------------+
+
+============================================================
+ TICK 15 - Fondo de Bikini
+============================================================
+ Plantas     (algas)     : 212
+ Herbivoros  (caracoles) : 7
+ Carnivoros  (anguilas)  : 4
+ Celdas vacias           : 65
+
+ Distribucion  (P plantas, H herbivoros, C carnivoros):
+
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 
+    +------------------------------------------------+
+  0 |. . . P P C P . P . P P P P P P P P P . P . P . |
+  1 |. . . . P P P P P P P P P P P P P . P P P P P P |
+  2 |. . C P P P P P P P P P P H P P P P P . P P P P |
+  3 |. P . P P P P P . . P P P . P P P P P P P . P P |
+  4 |P P P . P P P P P P P P P P P P P P P . P P P P |
+  5 |P P . . C P P . P P P P . P P P P P P P P P P P |
+  6 |. P P P . P P P P P . P P P P . H P P P P P P . |
+  7 |. . . P P P . P H H P P P P H P P P P P P P P P |
+  8 |. P P P P P . . . P P P P . . P P P P P P . P . |
+  9 |. P P P . P P P P . P H . . . P P . P . P P P P |
+ 10 |. . P P P P P P P P . P P H . P P P P P P P P P |
+ 11 |C . . P . P . P P P . . P . P P P P P P P P P . |
+    +------------------------------------------------+
+
+============================================================
+ TICK 20 - Fondo de Bikini
+============================================================
+ Plantas     (algas)     : 230
+ Herbivoros  (caracoles) : 12
+ Carnivoros  (anguilas)  : 2
+ Celdas vacias           : 44
+
+ Distribucion  (P plantas, H herbivoros, C carnivoros):
+
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 
+    +------------------------------------------------+
+  0 |. . P P P P P . P P P . P P P P P P . P P . P P |
+  1 |. . P P P . P P P . P P P P H . P P P P P P P . |
+  2 |P P P P P P P P P P P P P P P P P P P . P P P P |
+  3 |P P P . P P P . P P P H P . P P P P P P P P P P |
+  4 |P P P P P H H P P P . P P P P P P P P . P P P P |
+  5 |P P C P P P P P P P P P P P P H P P P P P P P . |
+  6 |P P P P P P P . P P P P P H . P P P P P P . P P |
+  7 |P P P P P P P H P P P P H . P . . P . P P P P P |
+  8 |. P P P P P P P . P P . P . . P . P P P P P P P |
+  9 |P P P P . P P P P H . P P . P P H P . P P P P P |
+ 10 |P P P P P P P P H . H . P P P P P P P P P P P P |
+ 11 |P P C P P P P . . . . P P . P P P P P P P P . P |
+    +------------------------------------------------+
+
+============================================================
+ SIMULACION FINALIZADA
+============================================================
+ Ticks completados       : 20
+ Modo                    : secuencial
+ Hilos utilizados        : 1
+ Tiempo de computo       : 0.000000 s
+ Ticks por segundo       : 0.00
+ Celdas por segundo      : 0.000e+00
+ Acciones por competencia: 0
+============================================================
