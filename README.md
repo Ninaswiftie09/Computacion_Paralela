@@ -12,7 +12,10 @@ comparar rendimiento sobre exactamente la misma lógica.
 | `E` | Anguila | Carnívoro / depredador |
 | `.` | Agua | Espacio disponible |
 
-Con `--simbolos pdf` la cuadrícula usa la notación del enunciado: `P`, `H`, `C`.
+## Integrantes
+- Roberto Barreda, 23354
+- Nina Najera, 231088
+- Jose Anton, 221041
 
 ## Requisitos
 
@@ -44,7 +47,7 @@ gcc -O2 -Wall -Wextra -std=c11 -fopenmp ecosistema.c reglas.c salida.c cli.c ben
 
 ## Ejecución
 
-Corrida por defecto (cuadrícula 12x24, 10 ticks, secuencial):
+Corrida (cuadrícula 12x24, 10 ticks, secuencial):
 
 ```bash
 ./ecosistema_paralelo
@@ -66,6 +69,20 @@ Ver todas las opciones:
 
 ```bash
 ./ecosistema_paralelo --ayuda
+```
+
+## Visor
+
+Requiere `pip install pygame`
+
+```bash
+python visor.py
+```
+
+Escenario que corre hasta que no queda ningún organismo vivo:
+
+```bash
+python visor.py --colapso
 ```
 
 ## Reproducir las mediciones

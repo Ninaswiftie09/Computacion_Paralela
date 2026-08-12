@@ -10,7 +10,7 @@
 #define MAX_VECINOS 8
 
 /*
- * Fondo de Bikini - Simulacion de ecosistema
+ * Simulacion de ecosistema con OpenMP
  *
  * Equivalencias ecologicas del proyecto:
  *
@@ -173,6 +173,9 @@ typedef struct {
 
     /* Cadena vacia = no escribir archivo de resultados */
     char ruta_resultados[MAX_RUTA_ARCHIVO];
+
+    /* Cadena vacia = no exportar la corrida */
+    char ruta_exportacion[MAX_RUTA_ARCHIVO];
 
     /* DIAGNOSTICO */
 
@@ -348,15 +351,6 @@ long long ecosistema_validar_coherencia(
  * archivo de resultados. Las imprimir_* son atajos a stdout.
  * ========================================================= */
 
-/*
- * Recibe argv[0] para poder localizar los recursos (bob.txt)
- * junto al ejecutable aunque la simulacion se lance desde
- * otro directorio.
- */
-void ecosistema_definir_ruta_programa(
-    const char *argv0
-);
-
 void ecosistema_reportar_presentacion(
     FILE *destino
 );
@@ -446,6 +440,21 @@ int ecosistema_ejecutar_benchmark(
  */
 int ecosistema_ejecutar_verificacion(
     const Configuracion *base
+);
+
+
+/* =========================================================
+ * EXPORTACION PARA EL VISOR
+ * ========================================================= */
+
+/*
+ * Corre la simulacion y escribe la secuencia de cuadros que
+ * reproduce visor.py. Se detiene antes de tiempo si el
+ * ecosistema se extingue.
+ */
+int ecosistema_exportar_corrida(
+    const Configuracion *base,
+    const char *ruta
 );
 
 

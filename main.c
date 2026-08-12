@@ -49,9 +49,6 @@ int main(int argc, char **argv) {
     int salida;
 
 
-    ecosistema_definir_ruta_programa(argv[0]);
-
-
     estado =
         configuracion_desde_argumentos(
             argc,
@@ -80,7 +77,8 @@ int main(int argc, char **argv) {
         return
             ecosistema_ejecutar_benchmark(
                 &config,
-                contiene_opcion(argc, argv, "--filas")
+                contiene_opcion(argc, argv, "--filas") ||
+                contiene_opcion(argc, argv, "--columnas")
             );
     }
 
@@ -94,6 +92,16 @@ int main(int argc, char **argv) {
     }
 
 
+    if (config.ruta_exportacion[0] != '\0') {
+
+        return
+            ecosistema_exportar_corrida(
+                &config,
+                config.ruta_exportacion
+            );
+    }
+
+
     if (
         !ecosistema_inicializar(
             &fondo_bikini,
@@ -103,7 +111,7 @@ int main(int argc, char **argv) {
 
         fprintf(
             stderr,
-            "No fue posible iniciar Fondo de Bikini.\n"
+            "No fue posible iniciar la simulacion.\n"
         );
 
         return 1;

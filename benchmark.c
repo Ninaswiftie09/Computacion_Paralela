@@ -226,6 +226,24 @@ static int medir(
     int r;
 
 
+    /*
+     * Aviso de avance por stderr: un barrido grande puede
+     * tardar minutos y sin esto la pantalla se queda muda.
+     * Va por stderr para no ensuciar la tabla de stdout.
+     */
+    fprintf(
+        stderr,
+        "   ... midiendo %s %dx%d con %d hilo%s\r",
+        modo == MODO_PARALELO ? "paralelo  " : "secuencial",
+        filas,
+        columnas,
+        hilos,
+        hilos == 1 ? " " : "s"
+    );
+
+    fflush(stderr);
+
+
     for (r = 0; r < REPETICIONES; ++r) {
 
         if (
@@ -259,6 +277,20 @@ static int medir(
     *salida = actual;
 
     salida->tiempo = tiempos[REPETICIONES / 2];
+
+
+    /*
+     * Se limpia la linea de avance para que no quede debajo
+     * de la fila de resultados.
+     */
+    fprintf(
+        stderr,
+        "\r%60s\r",
+        ""
+    );
+
+    fflush(stderr);
+
 
     return 1;
 }

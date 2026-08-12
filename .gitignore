@@ -52,3 +52,9 @@ Desktop.ini
 
 .exe
 .obj
+# Corridas exportadas para el visor (se regeneran solas)
+*.eco
+
+# Python
+__pycache__/
+*.pyc

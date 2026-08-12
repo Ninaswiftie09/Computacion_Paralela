@@ -180,6 +180,7 @@ void configuracion_imprimir_ayuda(
     printf("  --caracoles N          Cantidad inicial de herbivoros\n");
     printf("  --anguilas N           Cantidad inicial de carnivoros\n");
     printf("\n");
+    printf("  Si se da solo un lado, la cuadricula queda cuadrada.\n");
     printf("  Si se cambia el tamano sin fijar cantidades, las\n");
     printf("  poblaciones se recalculan manteniendo la densidad.\n\n");
 
@@ -200,8 +201,9 @@ void configuracion_imprimir_ayuda(
     printf("  --sin-cuadricula       Solo poblaciones, sin el mapa\n");
     printf("  --sin-presentacion     Omite la portada\n");
     printf("  --cada N               Reporta 1 de cada N ticks\n");
-    printf("  --simbolos bikini|pdf  A/G/E o P/H/C\n");
-    printf("  --salida RUTA          Escribe el archivo de resultados\n\n");
+    printf("  --simbolos pdf|bikini  P/H/C o A/G/E\n");
+    printf("  --salida RUTA          Escribe el archivo de resultados\n");
+    printf("  --exportar RUTA        Exporta la corrida para visor.py\n\n");
 
     printf("DIAGNOSTICO\n");
     printf("  --validar              Revisa invariantes en cada tick\n");
@@ -232,6 +234,10 @@ int configuracion_desde_argumentos(
 
     int poblacion_explicita;
 
+    int filas_dada;
+
+    int columnas_dada;
+
 
     if (salida == NULL) {
 
@@ -244,6 +250,10 @@ int configuracion_desde_argumentos(
     tamano_cambiado = 0;
 
     poblacion_explicita = 0;
+
+    filas_dada = 0;
+
+    columnas_dada = 0;
 
 
     for (i = 1; i < argc; ++i) {
@@ -279,6 +289,8 @@ int configuracion_desde_argumentos(
 
             tamano_cambiado = 1;
 
+            filas_dada = 1;
+
             ++i;
 
             continue;
@@ -293,6 +305,8 @@ int configuracion_desde_argumentos(
             }
 
             tamano_cambiado = 1;
+
+            columnas_dada = 1;
 
             ++i;
 
@@ -626,6 +640,38 @@ int configuracion_desde_argumentos(
         }
 
 
+        if (strcmp(opcion, "--exportar") == 0) {
+
+            if (valor == NULL) {
+
+                fprintf(
+                    stderr,
+                    "Error: --exportar necesita una ruta.\n"
+                );
+
+                return 0;
+            }
+
+
+            if (strlen(valor) >= MAX_RUTA_ARCHIVO) {
+
+                fprintf(
+                    stderr,
+                    "Error: la ruta del visor es demasiado larga.\n"
+                );
+
+                return 0;
+            }
+
+
+            strcpy(salida->ruta_exportacion, valor);
+
+            ++i;
+
+            continue;
+        }
+
+
         if (
             strcmp(opcion, "--bench") == 0 ||
             strcmp(opcion, "--verificar-todo") == 0
@@ -647,6 +693,29 @@ int configuracion_desde_argumentos(
         );
 
         return 0;
+    }
+
+
+    /*
+     * Dar solo un lado significa querer una cuadricula
+     * cuadrada. Sin esto, "--filas 512" dejaria las 24
+     * columnas por defecto y produciria una franja de 512x24,
+     * que casi nunca es lo que se busca.
+     */
+    if (
+        filas_dada &&
+        !columnas_dada
+    ) {
+
+        salida->columnas = salida->filas;
+
+    }
+    else if (
+        columnas_dada &&
+        !filas_dada
+    ) {
+
+        salida->filas = salida->columnas;
     }
 
 
