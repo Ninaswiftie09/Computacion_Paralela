@@ -71,7 +71,7 @@ Ver todas las opciones:
 ./ecosistema_paralelo --ayuda
 ```
 
-## Visor
+## Interfaz gráfica
 
 Requiere `pip install pygame`
 
@@ -79,11 +79,9 @@ Requiere `pip install pygame`
 python visor.py
 ```
 
-Escenario que corre hasta que no queda ningún organismo vivo:
-
-```bash
-python visor.py --colapso
-```
+Tres pantallas. **Configuración** para elegir tamaño, ticks, semilla, modo,
+hilos y poblaciones. **Visor** para ver la corrida cuadro por cuadro. Y
+**Herramientas** para medir el rendimiento y buscar race conditions.
 
 ## Reproducir las mediciones
 

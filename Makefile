@@ -21,7 +21,7 @@ SECUENCIAL = ecosistema_secuencial$(EXE)
 DIR_RESULTADOS = resultados
 
 
-.PHONY: all paralelo secuencial resultados visor visor-colapso bench verificar clean
+.PHONY: all paralelo secuencial resultados visor bench verificar clean
 
 all: paralelo secuencial
 
@@ -51,16 +51,11 @@ resultados: $(PARALELO)
 	@echo Resultados generados en $(DIR_RESULTADOS)
 
 
-# Visor grafico con pygame. El binario solo exporta los cuadros y
-# visor.py los reproduce. Requiere: pip install pygame
+# Interfaz grafica con pygame. Desde ahi se configura la corrida,
+# se ejecuta, se mide el rendimiento y se buscan race conditions.
+# Requiere: pip install pygame
 visor: $(PARALELO)
-	python visor.py --filas 64 --ticks 300 --modo paralelo --hilos 8
-
-
-# El mismo visor sobre un escenario que termina con el
-# ecosistema extinto.
-visor-colapso: $(PARALELO)
-	python visor.py --colapso
+	python visor.py
 
 
 # Los 20 ticks son los que documenta docs/RESULTADOS.md: hay que
