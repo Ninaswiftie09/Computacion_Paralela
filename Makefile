@@ -54,7 +54,7 @@ resultados: $(PARALELO)
 # Visor grafico con pygame. El binario solo exporta los cuadros y
 # visor.py los reproduce. Requiere: pip install pygame
 visor: $(PARALELO)
-	python visor.py --filas 64 --ticks 300 --modo paralelo --hilos 8
+	python visor.py
 
 
 # El mismo visor sobre un escenario que termina con el

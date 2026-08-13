@@ -44,38 +44,18 @@
             "detail": "Cuadricula 64x64 donde las tres especies coexisten"
         },
         {
-            "label": "4. Ver la simulacion (pygame)",
+            "label": "4. Abrir la interfaz grafica",
             "type": "shell",
             "command": "python",
             "args": [
-                "visor.py",
-                "--filas",
-                "64",
-                "--ticks",
-                "300",
-                "--modo",
-                "paralelo",
-                "--hilos",
-                "8"
+                "visor.py"
             ],
             "problemMatcher": [],
-            "detail": "Abre el visor grafico. Requiere: pip install pygame",
+            "detail": "Configura, ejecuta, visualiza y mide. Requiere: pip install pygame",
             "dependsOn": "1. Compilar (paralelo + secuencial)"
         },
         {
-            "label": "5. Ver el colapso del ecosistema (pygame)",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "visor.py",
-                "--colapso"
-            ],
-            "dependsOn": "1. Compilar (paralelo + secuencial)",
-            "problemMatcher": [],
-            "detail": "Escenario que corre hasta que no queda ningun organismo vivo"
-        },
-        {
-            "label": "6. Generar archivo de resultados",
+            "label": "5. Generar archivo de resultados",
             "type": "shell",
             "command": "make",
             "args": [
@@ -85,7 +65,7 @@
             "detail": "Escribe resultados/resultados.txt y resultados_paralelo.txt"
         },
         {
-            "label": "7. Benchmark (speedup y eficiencia)",
+            "label": "6. Benchmark (speedup y eficiencia)",
             "type": "shell",
             "command": "make",
             "args": [
@@ -95,7 +75,7 @@
             "detail": "Tarda varios minutos. Escribe resultados/benchmark.csv"
         },
         {
-            "label": "8. Verificar race conditions",
+            "label": "7. Verificar race conditions",
             "type": "shell",
             "command": "make",
             "args": [
@@ -105,7 +85,7 @@
             "detail": "44 corridas con 2, 4, 8 y 16 hilos revisando invariantes"
         },
         {
-            "label": "9. Ver todas las opciones",
+            "label": "8. Ver todas las opciones",
             "type": "shell",
             "command": "./ecosistema_paralelo.exe",
             "args": [
@@ -116,7 +96,7 @@
             "detail": "Imprime la ayuda de la linea de comandos"
         },
         {
-            "label": "10. Limpiar binarios",
+            "label": "9. Limpiar binarios",
             "type": "shell",
             "command": "make",
             "args": [

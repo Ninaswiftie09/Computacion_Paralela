@@ -176,9 +176,9 @@ void configuracion_imprimir_ayuda(
     printf("CUADRICULA Y POBLACION\n");
     printf("  --filas N              Filas de la cuadricula\n");
     printf("  --columnas N           Columnas de la cuadricula\n");
-    printf("  --algas N              Cantidad inicial de plantas\n");
-    printf("  --caracoles N          Cantidad inicial de herbivoros\n");
-    printf("  --anguilas N           Cantidad inicial de carnivoros\n");
+    printf("  --plantas N            Cantidad inicial de plantas\n");
+    printf("  --herbivoros N         Cantidad inicial de herbivoros\n");
+    printf("  --carnivoros N         Cantidad inicial de carnivoros\n");
     printf("\n");
     printf("  Si se da solo un lado, la cuadricula queda cuadrada.\n");
     printf("  Si se cambia el tamano sin fijar cantidades, las\n");
@@ -314,7 +314,15 @@ int configuracion_desde_argumentos(
         }
 
 
-        if (strcmp(opcion, "--algas") == 0) {
+        /*
+         * Los nombres --plantas, --herbivoros y --carnivoros son los
+         * del enunciado. Los antiguos se mantienen para no romper
+         * scripts que ya existan.
+         */
+        if (
+            strcmp(opcion, "--algas") == 0 ||
+            strcmp(opcion, "--plantas") == 0
+        ) {
 
             if (!leer_entero(valor, opcion, &salida->algas_iniciales)) {
 
@@ -329,7 +337,10 @@ int configuracion_desde_argumentos(
         }
 
 
-        if (strcmp(opcion, "--caracoles") == 0) {
+        if (
+            strcmp(opcion, "--caracoles") == 0 ||
+            strcmp(opcion, "--herbivoros") == 0
+        ) {
 
             if (!leer_entero(valor, opcion, &salida->caracoles_iniciales)) {
 
@@ -344,7 +355,10 @@ int configuracion_desde_argumentos(
         }
 
 
-        if (strcmp(opcion, "--anguilas") == 0) {
+        if (
+            strcmp(opcion, "--anguilas") == 0 ||
+            strcmp(opcion, "--carnivoros") == 0
+        ) {
 
             if (!leer_entero(valor, opcion, &salida->anguilas_iniciales)) {
 
