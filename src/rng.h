@@ -1,20 +1,10 @@
-// rng.h
-// -----------------------------------------------------------------------------
-// Generador pseudoaleatorio xorshift32, con estado PRIVADO por instancia.
+// rng.h -- Generador pseudoaleatorio xorshift32 con estado PRIVADO por instancia.
 //
-// Por que no usar rand()/srand() de <cstdlib>:
-//   - rand() mantiene un unico estado GLOBAL. En la version paralela, todos
-//     los hilos escribiendo/leyendo ese estado a la vez es una carrera de
-//     datos (comportamiento indefinido) y ademas serializa el acceso si se
-//     protege con un mutex/critical, matando el paralelismo.
-//   - Con xorshift32 cada particula (o cada hilo) tiene su PROPIO estado.
-//     No hay memoria compartida que proteger => no hace falta seccion
-//     critica para generar numeros aleatorios.
-//   - Ademas, sembrando cada estado como `semilla_global ^ indice` (o
-//     `semilla_global ^ omp_get_thread_num()`), la simulacion es
-//     REPRODUCIBLE: misma semilla -> mismos resultados, util para
-//     depurar y para las mediciones del Anexo 3.
-// -----------------------------------------------------------------------------
+// Por que no rand(): rand() tiene un unico estado GLOBAL. En la version paralela
+// eso seria una condicion de carrera, y protegerlo con un critical serializaria
+// el acceso. Aqui cada particula lleva su propio estado, asi que no hay memoria
+// compartida que proteger. Ademas, sembrando como `semilla ^ indice`, la escena
+// es reproducible: misma semilla -> misma simulacion.
 #pragma once
 #include <cstdint>
 
@@ -26,7 +16,6 @@ struct Xorshift32 {
         estado = (semilla == 0) ? 0xA5A5A5A5u : semilla;
     }
 
-    // Devuelve el siguiente entero pseudoaleatorio de 32 bits.
     inline uint32_t siguiente() {
         uint32_t x = estado;
         x ^= x << 13;

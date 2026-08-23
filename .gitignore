@@ -1,0 +1,14 @@
+# Binarios y objetos
+*.exe
+*.o
+*.obj
+build/
+
+# Resultados de benchmark (se regeneran con scripts/bench.ps1)
+resultados/*.csv
+
+# Basura de editores / Python
+__pycache__/
+*.pyc
+.vscode/*
+!.vscode/tasks.json
