@@ -1,6 +1,9 @@
 #include "nbody.h"
 #include <cmath>
 #include <algorithm>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 namespace {
 constexpr float PI = 3.14159265358979323846f;
@@ -14,6 +17,7 @@ constexpr float FRACCION_NUCLEO = 0.85f;  // el nucleo domina: orbitas limpias y
 constexpr float RADIO_DISCO_REL = 0.30f;  // radio del disco / min(ancho, alto)
 constexpr float RADIO_MIN_REL   = 0.05f;  // agujero central: nada nace sobre el nucleo
 constexpr float VEL_ACERCAMIENTO = 28.0f; // px/s con que se embisten las galaxias
+
 } // namespace
 
 bool modo_desde_texto(const std::string& texto, Modo& out) {
@@ -142,35 +146,61 @@ void SistemaNCuerpos::reiniciar(Modo modo, uint32_t semilla) {
 void SistemaNCuerpos::calcular_aceleraciones() {
     const float G    = static_cast<float>(fisica_.gravedad);
     const float eps2 = static_cast<float>(fisica_.softening * fisica_.softening);
+    const int   n    = n_;
+
+    // Punteros crudos con __restrict izados fuera del bucle. Sin esto el
+    // compilador tiene que asumir que los vectores podrian solaparse entre si,
+    // y no se atreve a vectorizar el bucle interno.
+    const float* __restrict pos_x = px_.data();
+    const float* __restrict pos_y = py_.data();
+    const float* __restrict masa  = masa_.data();
+    float* __restrict acc_x_out = ax_.data();
+    float* __restrict acc_y_out = ay_.data();
 
     // --- El bucle O(N^2): el 95% del tiempo de CPU del programa ---
-    // El bucle externo es 100% independiente entre iteraciones (cada i escribe
-    // solo ax_[i]/ay_[i] y solo LEE px_/py_/masa_), asi que paralelizarlo no
-    // requiere ninguna proteccion de memoria compartida.
-    for (int i = 0; i < n_; ++i) {
-        const float xi = px_[i], yi = py_[i];
+    // Cada cuerpo i es independiente: escribe solo su ax_[i]/ay_[i] y unicamente
+    // LEE las posiciones de los demas. Al no haber escrituras compartidas, no
+    // hace falta ningun mecanismo de proteccion aqui.
+    //
+    // schedule(static): todo i cuesta exactamente lo mismo (N iteraciones
+    // internas), asi que repartir bloques fijos de antemano ya queda
+    // perfectamente balanceado y no se paga sincronizacion en tiempo de
+    // ejecucion. Comparar con energia_potencial(), donde la carga si es dispareja.
+    //
+    // Nota medida: con -fopenmp GCC deja de vectorizar el bucle interno
+    // ("unsupported control flow in loop", ver -fopt-info-vec), asi que cada
+    // hilo corre a ~la mitad de la velocidad del binario secuencial. Se probaron
+    // omp simd, extraer el bucle a su propia funcion y bloqueo de registros:
+    // las tres empeoraron el tiempo absoluto. Esta forma es la mas rapida de
+    // las medidas, tanto en secuencial como en paralelo.
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < n; ++i) {
+        const float xi = pos_x[i], yi = pos_y[i];
         float acc_x = 0.0f, acc_y = 0.0f;
 
-        for (int j = 0; j < n_; ++j) {
-            const float dx = px_[j] - xi;
-            const float dy = py_[j] - yi;
+        for (int j = 0; j < n; ++j) {
+            const float dx = pos_x[j] - xi;
+            const float dy = pos_y[j] - yi;
 
             // Softening de Plummer: el eps^2 evita que la fuerza explote cuando
             // dos cuerpos casi se tocan. Ademas hace que el caso j == i aporte
-            // exactamente 0, asi que no hace falta un `if (i != j)` que rompa
+            // exactamente 0, asi que no hace falta un `if (i != j)` que romperia
             // la vectorizacion del bucle interno.
-            const float r2 = dx * dx + dy * dy + eps2;
-            const float inv_r = 1.0f / std::sqrt(r2);
+            const float r2     = dx * dx + dy * dy + eps2;
+            const float inv_r  = 1.0f / std::sqrt(r2);
             const float inv_r3 = inv_r * inv_r * inv_r;   // 1/r^3, sin pow()
 
-            const float p = masa_[j] * inv_r3;
+            const float p = masa[j] * inv_r3;
             acc_x += dx * p;
             acc_y += dy * p;
         }
 
-        ax_[i] = G * acc_x;
-        ay_[i] = G * acc_y;
+        acc_x_out[i] = G * acc_x;
+        acc_y_out[i] = G * acc_y;
     }
+    // Barrera implicita al cerrar el parallel for: ningun hilo sigue hasta que
+    // TODAS las aceleraciones esten listas. Recien entonces integrar() puede
+    // mover los cuerpos sin que nadie lea una posicion a medio actualizar.
 }
 
 void SistemaNCuerpos::integrar() {
@@ -179,6 +209,7 @@ void SistemaNCuerpos::integrar() {
     // Euler semi-implicito: se actualiza v con la aceleracion nueva y LUEGO se
     // mueve p con la v ya actualizada. Conserva la energia mucho mejor que el
     // Euler explicito, con el mismo costo.
+    #pragma omp parallel for schedule(static)
     for (int i = 0; i < n_; ++i) {
         vx_[i] += ax_[i] * dt;
         vy_[i] += ay_[i] * dt;
@@ -189,6 +220,9 @@ void SistemaNCuerpos::integrar() {
 
 double SistemaNCuerpos::energia_cinetica() const {
     double ke = 0.0;
+    // reduction(+:ke): cada hilo acumula en una copia privada y OpenMP las suma
+    // al final. Sin esto, todos escribirian la misma variable a la vez.
+    #pragma omp parallel for reduction(+:ke) schedule(static)
     for (int i = 0; i < n_; ++i) {
         ke += 0.5 * masa_[i] * (static_cast<double>(vx_[i]) * vx_[i] +
                                 static_cast<double>(vy_[i]) * vy_[i]);
@@ -205,6 +239,12 @@ double SistemaNCuerpos::energia_potencial() const {
     // el potencial cuyo gradiente da la fuerza suavizada de arriba, por eso
     // KE + PE si tiene sentido como cantidad conservada.
     // Cada par se cuenta una sola vez (j > i).
+    //
+    // Aqui SI conviene schedule(dynamic): como el bucle interno arranca en i+1,
+    // la iteracion i = 0 hace N trabajos y la i = N-1 no hace ninguno. Con static
+    // el hilo que reciba el bloque final quedaria ocioso. Es el contraste exacto
+    // con el bucle de fuerzas, donde la carga si es uniforme.
+    #pragma omp parallel for reduction(+:pe) schedule(dynamic, 64)
     for (int i = 0; i < n_; ++i) {
         for (int j = i + 1; j < n_; ++j) {
             const double dx = static_cast<double>(px_[j]) - px_[i];

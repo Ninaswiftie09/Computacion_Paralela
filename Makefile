@@ -24,7 +24,7 @@ ifeq ($(strip $(SDL_LIBS)),)
   SDL_LIBS   := -L/ucrt64/lib -lmingw32 -lSDL2
 endif
 
-FUENTES := src/main.cpp src/cli.cpp src/nbody.cpp src/palette.cpp src/render.cpp
+FUENTES := src/main.cpp src/cli.cpp src/nbody.cpp src/palette.cpp src/render.cpp src/hud.cpp
 CABECERAS := $(wildcard src/*.h)
 
 .PHONY: all seq par clean
@@ -34,8 +34,10 @@ all: seq par
 seq: nbody_seq
 par: nbody_par
 
+# -Wno-unknown-pragmas: sin -fopenmp los #pragma omp se ignoran a proposito,
+# no es un descuido. Es justamente lo que hace posible un solo arbol de fuentes.
 nbody_seq: $(FUENTES) $(CABECERAS)
-	$(CXX) $(CXXFLAGS) $(SDL_CFLAGS) $(FUENTES) -o $@ $(SDL_LIBS)
+	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas $(SDL_CFLAGS) $(FUENTES) -o $@ $(SDL_LIBS)
 
 nbody_par: $(FUENTES) $(CABECERAS)
 	$(CXX) $(CXXFLAGS) -fopenmp $(SDL_CFLAGS) $(FUENTES) -o $@ $(SDL_LIBS)
