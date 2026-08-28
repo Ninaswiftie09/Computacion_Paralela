@@ -162,10 +162,24 @@ void SistemaNCuerpos::calcular_aceleraciones() {
     // LEE las posiciones de los demas. Al no haber escrituras compartidas, no
     // hace falta ningun mecanismo de proteccion aqui.
     //
-    // schedule(static): todo i cuesta exactamente lo mismo (N iteraciones
-    // internas), asi que repartir bloques fijos de antemano ya queda
-    // perfectamente balanceado y no se paga sincronizacion en tiempo de
-    // ejecucion. Comparar con energia_potencial(), donde la carga si es dispareja.
+    // schedule(runtime): la politica se elige con --schedule, para poder medirlas
+    // (usar runtime en vez de una politica fija no cuesta nada, medido).
+    //
+    // La regla de libro dice que aqui deberia ganar static: todo i cuesta
+    // exactamente lo mismo (N iteraciones internas), asi que un reparto fijo ya
+    // queda balanceado y no paga sincronizacion. Medido, gana dynamic:
+    //
+    //     hilos    static   dynamic   guided     (ms/paso, N=8000)
+    //       8      14.57     13.97     14.13
+    //      16      11.63      9.96     10.39
+    //      32      10.65      8.60      9.27
+    //
+    // El motivo es que la regla supone que todos los nucleos son iguales, y en
+    // un CPU hibrido no lo son: este i9-13900HX tiene P-cores rapidos y E-cores
+    // lentos. Aunque cada hilo reciba la misma CANTIDAD de trabajo, el que cae
+    // en un E-core tarda mas y los demas lo esperan en la barrera. Dynamic
+    // reparte sobre la marcha: los nucleos rapidos toman mas trozos. Por eso la
+    // ventaja crece con el numero de hilos (4% con 8, 19% con 32).
     //
     // Nota medida: con -fopenmp GCC deja de vectorizar el bucle interno
     // ("unsupported control flow in loop", ver -fopt-info-vec), asi que cada
@@ -173,7 +187,7 @@ void SistemaNCuerpos::calcular_aceleraciones() {
     // omp simd, extraer el bucle a su propia funcion y bloqueo de registros:
     // las tres empeoraron el tiempo absoluto. Esta forma es la mas rapida de
     // las medidas, tanto en secuencial como en paralelo.
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(runtime)
     for (int i = 0; i < n; ++i) {
         const float xi = pos_x[i], yi = pos_y[i];
         float acc_x = 0.0f, acc_y = 0.0f;

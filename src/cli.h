@@ -8,6 +8,12 @@
 #include <string>
 #include "nbody.h"
 
+// Politica de reparto de iteraciones entre hilos (OpenMP schedule).
+enum class Reparto { Estatico, Dinamico, Guiado };
+
+bool reparto_desde_texto(const std::string& texto, Reparto& out);
+const char* texto_de_reparto(Reparto r);
+
 struct Parametros {
     int      n_cuerpos = 5000;   // -n --particles   [2, 200000]
     int      ancho     = 1000;   // -w --width       [>= 640]
@@ -19,7 +25,11 @@ struct Parametros {
 
     ParametrosFisica fisica;     // -G gravedad, -e softening, -d paso
 
+    Reparto reparto = Reparto::Dinamico;  // --schedule (ver nota en nbody.cpp)
+    int     trozo   = 0;                  // --chunk, 0 = el default de OpenMP
+
     bool sin_estelas   = false;  // --no-trails
+    bool benchmark     = false;  // --bench, mide sin abrir ventana
     bool mostrar_ayuda = false;  // --help
 };
 

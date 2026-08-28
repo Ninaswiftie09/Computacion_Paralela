@@ -71,6 +71,22 @@ bool leer_real(int argc, char** argv, int& i, const std::string& bandera,
 
 } // namespace
 
+bool reparto_desde_texto(const std::string& texto, Reparto& out) {
+    if (texto == "static")  { out = Reparto::Estatico; return true; }
+    if (texto == "dynamic") { out = Reparto::Dinamico; return true; }
+    if (texto == "guided")  { out = Reparto::Guiado;   return true; }
+    return false;
+}
+
+const char* texto_de_reparto(Reparto r) {
+    switch (r) {
+        case Reparto::Estatico: return "static";
+        case Reparto::Dinamico: return "dynamic";
+        case Reparto::Guiado:   return "guided";
+    }
+    return "?";
+}
+
 void imprimir_ayuda(const char* nombre_programa) {
     std::printf(
         "Uso: %s [opciones]\n"
@@ -179,6 +195,22 @@ bool parsear_argumentos(int argc, char** argv, Parametros& out) {
         }
 
         if (arg == "--no-trails") { out.sin_estelas = true; continue; }
+        if (arg == "--bench")     { out.benchmark   = true; continue; }
+
+        if (arg == "--schedule") {
+            std::string val;
+            if (!siguiente_valor(argc, argv, i, val) || !reparto_desde_texto(val, out.reparto)) {
+                std::fprintf(stderr,
+                    "Error: --schedule debe ser static, dynamic o guided.\n");
+                return false;
+            }
+            continue;
+        }
+        if (arg == "--chunk") {
+            if (!leer_entero(argc, argv, i, arg, 0, 1000000, entero)) return false;
+            out.trozo = static_cast<int>(entero);
+            continue;
+        }
 
         std::fprintf(stderr, "Error: argumento desconocido '%s'.\n", arg.c_str());
         return false;

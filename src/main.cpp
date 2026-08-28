@@ -100,6 +100,73 @@ bool iniciar_sdl(ContextoSDL& ctx, const Parametros& p) {
     return true;
 }
 
+// Aplica la politica de reparto elegida en --schedule al schedule(runtime)
+// del bucle de fuerzas.
+void aplicar_reparto(Reparto r, int trozo) {
+#ifdef _OPENMP
+    omp_sched_t clase = omp_sched_static;
+    switch (r) {
+        case Reparto::Estatico: clase = omp_sched_static;  break;
+        case Reparto::Dinamico: clase = omp_sched_dynamic; break;
+        case Reparto::Guiado:   clase = omp_sched_guided;  break;
+    }
+    omp_set_schedule(clase, trozo);   // trozo 0 = que OpenMP elija
+#else
+    (void)r; (void)trozo;
+#endif
+}
+
+// Corre la simulacion SIN abrir ventana y emite una fila CSV con los tiempos.
+// Sirve para el barrido de mediciones: no depende de que haya pantalla, ni de
+// vsync, ni del costo de presentar la textura.
+int ejecutar_benchmark(const Parametros& p) {
+    constexpr long FRAMES_CALENTAMIENTO = 10;   // se descartan: cache fria, hilos arrancando
+    const long frames = (p.frames_max > 0) ? p.frames_max : 100;
+
+    std::unique_ptr<SistemaNCuerpos> sistema;
+    std::vector<uint32_t> framebuffer;
+    try {
+        sistema = std::make_unique<SistemaNCuerpos>(
+            p.n_cuerpos, p.ancho, p.alto, p.modo, p.semilla, p.fisica);
+        framebuffer.assign(static_cast<size_t>(p.ancho) * p.alto, COLOR_FONDO);
+    } catch (const std::bad_alloc&) {
+        std::fprintf(stderr, "Error: memoria insuficiente para N=%d y canvas %dx%d.\n",
+                     p.n_cuerpos, p.ancho, p.alto);
+        return 1;
+    }
+
+    auto un_frame = [&](double& acum_fisica, double& acum_render) {
+        const auto t0 = std::chrono::steady_clock::now();
+        sistema->calcular_aceleraciones();
+        sistema->integrar();
+        const auto t1 = std::chrono::steady_clock::now();
+        if (p.sin_estelas) limpiar(framebuffer, COLOR_FONDO);
+        else               desvanecer(framebuffer, FACTOR_ESTELA);
+        dibujar_cuerpos(framebuffer, p.ancho, p.alto, *sistema);
+        const auto t2 = std::chrono::steady_clock::now();
+        acum_fisica += std::chrono::duration<double, std::milli>(t1 - t0).count();
+        acum_render += std::chrono::duration<double, std::milli>(t2 - t1).count();
+    };
+
+    double descarte_f = 0.0, descarte_r = 0.0;
+    for (long k = 0; k < FRAMES_CALENTAMIENTO; ++k) un_frame(descarte_f, descarte_r);
+
+    double ms_fisica = 0.0, ms_render = 0.0;
+    for (long k = 0; k < frames; ++k) un_frame(ms_fisica, ms_render);
+
+    ms_fisica /= frames;
+    ms_render /= frames;
+    const double ms_frame = ms_fisica + ms_render;
+
+    // modo,n,hilos,schedule,chunk,frames,ms_fisica,ms_render,ms_frame,fps
+    std::printf("%s,%d,%d,%s,%d,%ld,%.4f,%.4f,%.4f,%.2f\n",
+                texto_de_modo(p.modo), p.n_cuerpos, hilos_activos(),
+                texto_de_reparto(p.reparto), p.trozo, frames,
+                ms_fisica, ms_render, ms_frame,
+                (ms_frame > 0.0) ? 1000.0 / ms_frame : 0.0);
+    return 0;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -116,6 +183,10 @@ int main(int argc, char** argv) {
     }
 
     fijar_hilos(p.hilos);
+    aplicar_reparto(p.reparto, p.trozo);
+
+    // --bench no necesita ventana: se mide y se sale, sin inicializar SDL.
+    if (p.benchmark) return ejecutar_benchmark(p);
 
     // La memoria se reserva ANTES de abrir la ventana: si N no cabe, es mejor
     // fallar en la consola que dejar una ventana huerfana en pantalla.
