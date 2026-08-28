@@ -80,8 +80,23 @@ void dibujar_cuerpos(std::vector<uint32_t>& fb, int ancho, int alto,
         const int banda_fin = (alto * (id + 1)) / n_hilos;   // exclusivo
 
         for (int i = 0; i < n; ++i) {
-            const int cx = static_cast<int>(px[i]);
-            const int cy = static_cast<int>(py[i]);
+            const float fx = px[i];
+            const float fy = py[i];
+
+            // Defensa contra posiciones no representables como int: con -G y
+            // -dt en su maximo a la vez (ambos individualmente validos por
+            // cli.cpp) la integracion es inestable y un cuerpo puede terminar
+            // en una coordenada finita pero enorme -- verificado que N=500,
+            // G=1e6, dt=1.0 llega a px ~1.2e10, muy por encima de INT_MAX.
+            // static_cast<int> de eso (o de un NaN, si algo aguas arriba
+            // fallara) es comportamiento indefinido, no una lectura basura
+            // inofensiva. Un cuerpo asi de lejos tampoco se veria en pantalla,
+            // asi que descartarlo no cambia nada visualmente.
+            if (!std::isfinite(fx) || !std::isfinite(fy) ||
+                fx < -2.0e9f || fx > 2.0e9f || fy < -2.0e9f || fy > 2.0e9f) continue;
+
+            const int cx = static_cast<int>(fx);
+            const int cy = static_cast<int>(fy);
 
             // Descarte temprano: fuera del canvas, o fuera de la banda propia.
             if (cx < -RADIO_DESTELLO || cx >= ancho + RADIO_DESTELLO) continue;

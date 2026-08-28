@@ -24,6 +24,8 @@ enum class Modo {
 
 // Convierte "colision"/"galaxia"/"nube" a Modo. Devuelve false si no coincide.
 bool modo_desde_texto(const std::string& texto, Modo& out);
+
+// Texto legible de un Modo, para el HUD y el CSV de --bench.
 const char* texto_de_modo(Modo m);
 
 // Constantes fisicas ajustables desde la linea de comandos.

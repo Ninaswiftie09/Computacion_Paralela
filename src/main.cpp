@@ -49,6 +49,14 @@ void fijar_hilos(int n) {
 }
 
 // Recursos de SDL agrupados para que la limpieza sea un solo camino de salida.
+//
+// Auditoria de inicializacion/destruccion (Bloque 4): los tres punteros
+// arrancan en nullptr, cada uno se pone SOLO si su Create* respectivo tuvo
+// exito, y el destructor comprueba cada uno antes de liberarlo. Eso cubre los
+// tres caminos de salida posibles de iniciar_sdl(): exito total, fallo a
+// mitad de camino (ventana creada pero textura no, por ejemplo), y el
+// "camino cero" en que main() nunca llega a construir ContextoSDL porque
+// el bad_alloc de sistema/framebuffer se atrapa antes de tocar SDL.
 struct ContextoSDL {
     SDL_Window*   ventana  = nullptr;
     SDL_Renderer* renderer = nullptr;

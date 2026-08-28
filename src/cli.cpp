@@ -101,7 +101,7 @@ void imprimir_ayuda(const char* nombre_programa) {
         "\n"
         "Fisica:\n"
         "  -G, --gravity G     Constante gravitacional      (def. 100)\n"
-        "  -e, --softening E   Suavizado en px, evita r=0   (def. 15)\n"
+        "  -e, --softening E   Suavizado en px, evita r=0   (def. 15, rango (0.001, 10000])\n"
         "  -d, --dt DT         Paso de tiempo en segundos   (def. 0.020)\n"
         "\n"
         "Ventana y ejecucion:\n"
@@ -172,9 +172,19 @@ bool parsear_argumentos(int argc, char** argv, Parametros& out) {
             continue;
         }
         if (arg == "-e" || arg == "--softening") {
-            // Debe ser > 0: con eps = 0 la fuerza diverge cuando dos cuerpos
-            // coinciden y la simulacion explota a NaN.
-            if (!leer_real(argc, argv, i, arg, 0.0, 1e4, real)) return false;
+            // El piso NO es 0.0 por una razon de punto flotante, no solo fisica:
+            // eps^2 se guarda en float, y con softening por debajo de ~1e-19 ese
+            // cuadrado hace underflow a exactamente 0.0f. Cuando eso pasa, el
+            // termino j==i del bucle de fuerzas (donde dx=dy=0 siempre) calcula
+            // 1/sqrt(0) = inf y luego 0*inf = NaN, que contamina TODO el sistema
+            // en un solo paso -- verificado con -e 1e-25, que sin este piso caia
+            // dentro del rango permitido. 1e-3 deja variar el softening en mas de
+            // 6 ordenes de magnitud por debajo del default (15) sin acercarse al
+            // underflow (eps^2 = 1e-6, muy por encima del minimo normal de float).
+            // El limite inferior real es 1e-3; se pasa apenas por debajo para
+            // que escribir exactamente "0.001" (el minimo documentado) no caiga
+            // del lado excluido del rango abierto que usa leer_real().
+            if (!leer_real(argc, argv, i, arg, 1e-3 - 1e-9, 1e4, real)) return false;
             out.fisica.softening = real;
             continue;
         }

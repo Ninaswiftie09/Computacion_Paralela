@@ -11,7 +11,10 @@
 // Politica de reparto de iteraciones entre hilos (OpenMP schedule).
 enum class Reparto { Estatico, Dinamico, Guiado };
 
+// Convierte "static"/"dynamic"/"guided" a Reparto. Devuelve false si no coincide.
 bool reparto_desde_texto(const std::string& texto, Reparto& out);
+
+// Texto legible de un Reparto, para el CSV de --bench y los mensajes de error.
 const char* texto_de_reparto(Reparto r);
 
 struct Parametros {
@@ -37,4 +40,5 @@ struct Parametros {
 // devuelve false; el llamador debe salir con codigo != 0.
 bool parsear_argumentos(int argc, char** argv, Parametros& out);
 
+// Imprime la ayuda de uso (--help) con todas las banderas y sus rangos.
 void imprimir_ayuda(const char* nombre_programa);

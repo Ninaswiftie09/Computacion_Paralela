@@ -144,8 +144,17 @@ void SistemaNCuerpos::reiniciar(Modo modo, uint32_t semilla) {
 }
 
 void SistemaNCuerpos::calcular_aceleraciones() {
+    // Piso de defensa en profundidad: cli.cpp ya exige softening >= 1e-3 para
+    // que eps^2 no haga underflow a 0.0f, pero esta funcion no deberia depender
+    // de quien la llama para ser segura (SistemaNCuerpos tambien se puede usar
+    // fuera de la CLI). Si eps^2 llegara a 0, el termino j==i de abajo (donde
+    // dx=dy=0 siempre) calcularia 1/sqrt(0)=inf y 0*inf=NaN, contaminando todo
+    // el sistema en un solo paso. El piso no cambia nada en el rango normal de
+    // uso: 1e-6 en px^2 es invisible frente al softening tipico (15^2 = 225).
+    constexpr float EPS2_MINIMO = 1e-6f;
     const float G    = static_cast<float>(fisica_.gravedad);
-    const float eps2 = static_cast<float>(fisica_.softening * fisica_.softening);
+    const float eps2 = std::max(static_cast<float>(fisica_.softening * fisica_.softening),
+                                EPS2_MINIMO);
     const int   n    = n_;
 
     // Punteros crudos con __restrict izados fuera del bucle. Sin esto el

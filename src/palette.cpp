@@ -13,6 +13,7 @@ constexpr uint8_t PARADAS[N_PARADAS][3] = {
     { 255, 100,  40 }   // 1.00  naranja/rojo: lo mas rapido de la escena
 };
 
+// Interpolacion lineal de un canal de color entre a y b.
 inline uint8_t mezclar(uint8_t a, uint8_t b, float f) {
     return static_cast<uint8_t>(a + (b - a) * f);
 }

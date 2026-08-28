@@ -86,6 +86,7 @@ constexpr int AVANCE_X = (ANCHO_GLIFO + 1) * ESCALA;
 constexpr int AVANCE_Y = (ALTO_GLIFO + 2) * ESCALA;
 constexpr int MARGEN   = 8;
 
+// Empaqueta RGB de 8 bits en un pixel ARGB8888 opaco.
 inline uint32_t empacar(uint8_t r, uint8_t g, uint8_t b) {
     return 0xFF000000u | (static_cast<uint32_t>(r) << 16) |
            (static_cast<uint32_t>(g) << 8) | b;

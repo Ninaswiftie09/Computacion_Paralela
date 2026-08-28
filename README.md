@@ -64,7 +64,7 @@ Los dos binarios salen de **los mismos fuentes**: los `#pragma omp` son inertes 
 | `-t T` | Hilos OpenMP (0 = auto) | 0 |
 | `-w W` / `-h H` | Canvas (mín. 640×480) | 1000×700 |
 | `-s S` | Semilla | 42 |
-| `-G G` / `-e E` / `-d DT` | Gravedad / softening / paso | 100 / 15 / 0.02 |
+| `-G G` / `-e E` / `-d DT` | Gravedad / softening (mín. 0.001) / paso | 100 / 15 / 0.02 |
 | `-f F` | Correr F frames y salir | 0 |
 | `--no-trails` | Sin estelas | off |
 | `--bench` | Mide sin abrir ventana, emite una fila CSV | off |
@@ -73,6 +73,13 @@ Los dos binarios salen de **los mismos fuentes**: los `#pragma omp` son inertes 
 
 **Teclas:** `1`-`9` hilos en vivo · `ESPACIO` pausa · `R` reinicia · `M` escenario ·
 `T` estelas · `ESC` salir
+
+**Por qué el mínimo de `-e` es 0.001 y no 0.** Por debajo de ~1e-19, `softening²`
+guardado en `float` hace *underflow* a `0.0`, y el término `j == i` del bucle de
+fuerzas (donde `dx = dy = 0` siempre) pasa de dar 0 a dar `1/√0 = inf` y luego
+`0 · inf = NaN`, que contamina el sistema entero en un solo frame. El límite en
+`cli.cpp` lo evita en la entrada; `nbody.cpp` tiene además un piso interno como
+segunda capa, por si `SistemaNCuerpos` se usa fuera de la CLI.
 
 ## Medir
 
