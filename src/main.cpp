@@ -150,7 +150,7 @@ int ejecutar_benchmark(const Parametros& p) {
         const auto t1 = std::chrono::steady_clock::now();
         if (p.sin_estelas) limpiar(framebuffer, COLOR_FONDO);
         else               desvanecer(framebuffer, FACTOR_ESTELA);
-        dibujar_cuerpos(framebuffer, p.ancho, p.alto, *sistema);
+        dibujar_cuerpos(framebuffer, p.ancho, p.alto, *sistema, sistema->tono_jitter());
         const auto t2 = std::chrono::steady_clock::now();
         acum_fisica += std::chrono::duration<double, std::milli>(t1 - t0).count();
         acum_render += std::chrono::duration<double, std::milli>(t2 - t1).count();
@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
         // --- Render ---
         if (p.sin_estelas) limpiar(framebuffer, COLOR_FONDO);
         else               desvanecer(framebuffer, FACTOR_ESTELA);
-        dibujar_cuerpos(framebuffer, p.ancho, p.alto, *sistema);
+        dibujar_cuerpos(framebuffer, p.ancho, p.alto, *sistema, sistema->tono_jitter());
         const auto t2 = std::chrono::steady_clock::now();
 
         // Promedio movil exponencial: suaviza el numero sin guardar historial.
