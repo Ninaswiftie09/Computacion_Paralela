@@ -66,6 +66,7 @@ public:
     const std::vector<float>& py() const { return py_; }
     const std::vector<float>& vx() const { return vx_; }
     const std::vector<float>& vy() const { return vy_; }
+    const std::vector<float>& tono_jitter() const { return tono_jitter_; }  // pseudorandom color hue per body
 
 private:
     int n_, ancho_, alto_;
@@ -79,6 +80,7 @@ private:
     std::vector<float> vx_, vy_;   // velocidad
     std::vector<float> ax_, ay_;   // aceleracion (salida de la fase 1)
     std::vector<float> masa_;
+    std::vector<float> tono_jitter_;  // pseudorandom hue offset [0, 1) per body for color randomization
 
     // Siembra `cuenta` cuerpos como un disco en rotacion alrededor de (cx, cy),
     // con un nucleo masivo en el indice `desde`. `giro` = +1 o -1.

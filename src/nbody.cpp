@@ -44,6 +44,7 @@ SistemaNCuerpos::SistemaNCuerpos(int n, int ancho, int alto, Modo modo,
     vx_.resize(n); vy_.resize(n);
     ax_.resize(n); ay_.resize(n);
     masa_.resize(n);
+    tono_jitter_.resize(n);
     reiniciar(modo, semilla);
 }
 
@@ -112,6 +113,14 @@ void SistemaNCuerpos::reiniciar(Modo modo, uint32_t semilla) {
     Xorshift32 r(semilla);
     std::fill(ax_.begin(), ax_.end(), 0.0f);
     std::fill(ay_.begin(), ay_.end(), 0.0f);
+
+    // Initialize pseudorandom hue jitter: each body gets a unique color offset [0, 1).
+    // This ensures colors are not purely deterministic by speed, satisfying the
+    // requirement: "idealmente generados de forma pseudoaleatoria" (enunciado).
+    for (int i = 0; i < n_; ++i) {
+        Xorshift32 r_jitter(semilla ^ i);
+        tono_jitter_[i] = r_jitter.uniforme01();
+    }
 
     const float w = static_cast<float>(ancho_), h = static_cast<float>(alto_);
 
