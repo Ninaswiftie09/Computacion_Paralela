@@ -54,7 +54,7 @@ void limpiar(std::vector<uint32_t>& fb, uint32_t color) {
 }
 
 void dibujar_cuerpos(std::vector<uint32_t>& fb, int ancho, int alto,
-                     const SistemaNCuerpos& sistema) {
+                     const SistemaNCuerpos& sistema, const std::vector<float>& tono_jitter) {
     const auto& px = sistema.px();
     const auto& py = sistema.py();
     const auto& vx = sistema.vx();
@@ -103,7 +103,9 @@ void dibujar_cuerpos(std::vector<uint32_t>& fb, int ancho, int alto,
             if (cy + RADIO_DESTELLO < banda_ini || cy - RADIO_DESTELLO >= banda_fin) continue;
 
             const float rapidez = std::sqrt(vx[i] * vx[i] + vy[i] * vy[i]);
-            const ColorRGB c = color_por_rapidez(rapidez * inv_ref);
+            // Add pseudorandom hue jitter to satisfy requirement: colors are not purely speed-based.
+            const float t_con_jitter = std::fmod(rapidez * inv_ref + tono_jitter[i], 1.0f);
+            const ColorRGB c = color_por_rapidez(t_con_jitter);
 
             const int y0 = std::max(banda_ini,     cy - RADIO_DESTELLO);
             const int y1 = std::min(banda_fin - 1, cy + RADIO_DESTELLO);

@@ -16,8 +16,9 @@ void desvanecer(std::vector<uint32_t>& fb, uint32_t factor);
 // Pinta el fondo de un solo color (usado cuando las estelas estan apagadas).
 void limpiar(std::vector<uint32_t>& fb, uint32_t color);
 
-// Dibuja cada cuerpo como un pequeno destello aditivo, coloreado por su rapidez.
+// Dibuja cada cuerpo como un pequeno destello aditivo, coloreado por su rapidez
+// con un jitter de tono pseudoaleatorio por cuerpo.
 // El brillo se SUMA, asi que donde se acumulan muchos cuerpos se satura a blanco
 // y se ve el nucleo de la galaxia.
 void dibujar_cuerpos(std::vector<uint32_t>& fb, int ancho, int alto,
-                     const SistemaNCuerpos& sistema);
+                     const SistemaNCuerpos& sistema, const std::vector<float>& tono_jitter);
