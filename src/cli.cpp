@@ -226,5 +226,43 @@ bool parsear_argumentos(int argc, char** argv, Parametros& out) {
         return false;
     }
 
+    // --- Defensive programming: cross-validation of edge cases ---
+    // Edge case 1: Very large dt combined with large G can lead to explosive integration.
+    // Sanity check: G * dt should stay below a reasonable threshold to avoid NaN.
+    const double G_dt_product = out.fisica.gravedad * out.fisica.paso;
+    if (G_dt_product > 100.0) {
+        std::fprintf(stderr,
+            "Aviso: --gravity * --dt = %.2f es muy grande; "
+            "la integracion puede volverse inestable o producir NaN.\n"
+            "       Considere reducir --gravity o --dt.\n", G_dt_product);
+    }
+
+    // Edge case 2: Very small softening risks numerical issues even with float safeguards.
+    if (out.fisica.softening < 0.01) {
+        std::fprintf(stderr,
+            "Aviso: --softening = %.2e es muy pequeno; "
+            "el suavizado de Plummer puede ser inefectivo.\n", out.fisica.softening);
+    }
+
+    // Edge case 3: Extremely large canvas can exhaust memory even with reasonable N.
+    const long pixel_total = static_cast<long>(out.ancho) * static_cast<long>(out.alto);
+    if (pixel_total > 16000000L) {  // >4K (3840x4320)
+        std::fprintf(stderr,
+            "Aviso: canvas de %dx%d = %.1f megapixeles; "
+            "la GPU puede ser lenta o la memoria insuficiente.\n",
+            out.ancho, out.alto, pixel_total / 1e6);
+    }
+
+    // Edge case 4: N=2 or N=3 are extreme: collision distributes 1 body per galaxy.
+    if (out.n_cuerpos == 2) {
+        std::fprintf(stderr,
+            "Aviso: N=2 es un caso extremo; cada cuerpo es un nucleo sin estrellas.\n");
+    }
+    if (out.n_cuerpos == 3) {
+        std::fprintf(stderr,
+            "Aviso: N=3 es un caso extremo en modo colision; "
+            "se distribuyen 1-2 cuerpos por galaxia.\n");
+    }
+
     return true;
 }
