@@ -125,10 +125,19 @@ Comando para ver el efecto:
 
 ## Notas de Performance
 
-- **Secuencial**: Alcanza ~30 FPS con N ≈ 7000 en máquinas normales
-- **Paralelo**: Lineal (8 hilos = 7x speedup típico)
-- **Benchmark**: Mide sin ventana, más estable que modo interactivo
-- **Reproducible**: Misma semilla = misma simulación (determinístico en lo posible)
+- **Secuencial**: alcanza ~30 FPS alrededor de N ≈ 7000.
+- **Paralelo**: el speedup **no es lineal**, y depende de N y de la máquina.
+  Medido con 8 hilos: 1.75x con N=4000 y 1.38x con N=8000 (equipo del informe);
+  2.93x con N=8000 en un i9-13900HX. Con 32 hilos y N=16000 se llega a 5.39x.
+- **Con 1 o 2 hilos la versión paralela es MÁS LENTA que la secuencial.** No es
+  el costo de crear hilos: `-fopenmp` hace que GCC deje de vectorizar el bucle
+  interno, así que cada hilo rinde ~la mitad. Ver la sección
+  "Nota sobre `-fopenmp` y vectorización" del README.
+- **El speedup crece con N**: a más trabajo, el costo fijo del paralelismo pesa
+  menos. Con N pequeño, pasar de 8 a 32 hilos empeora los tiempos.
+- **Benchmark**: mide sin ventana, más estable que el modo interactivo.
+- **Reproducible**: misma semilla = misma simulación. Las posiciones salen
+  idénticas bit a bit sin importar cuántos hilos se usen.
 
 ## Troubleshooting
 

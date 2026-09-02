@@ -24,7 +24,10 @@ v += a·dt   →   p += v·dt
   de paso hace que `j == i` aporte cero, así el bucle interno no necesita un `if`.
 - **Trigonometría**: las estrellas nacen en órbita circular, `v = √(G·M_enc(r)/r)` aplicada
   tangencialmente → `v·(−sin θ, cos θ)`.
-- **Color** por rapidez: azul (lento) → cian → blanco → amarillo → naranja (rápido).
+- **Color**: rampa por rapidez (azul lento → cian → blanco → amarillo → naranja rápido)
+  más un **desplazamiento de tono pseudoaleatorio por cuerpo**, sembrado con la misma
+  semilla. Por eso dos cuerpos con la misma rapidez no salen del mismo color, y cambiar
+  `-s` produce una paleta distinta.
 
 ## Por qué paralelizarlo
 

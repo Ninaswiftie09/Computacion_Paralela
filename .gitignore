@@ -12,3 +12,13 @@ __pycache__/
 *.pyc
 .vscode/*
 !.vscode/tasks.json
+
+# Temporales de LaTeX (la fuente vive en docs/informe/informe.tex)
+*.aux
+*.toc
+*.out
+*.synctex.gz
+docs/informe/*.log
+docs/informe/informe.pdf
+docs/informe/informe.tex
+docs/informe/img/logo_uvg.jpg
