@@ -1,11 +1,12 @@
 # # Proyecto 2 — Computación Paralela y Distribuida
-## Fuerza bruta DES con OpenMPI
 
-Este repo contiene un **avance** del proyecto: la base funcional en C con
-OpenMPI, lista para compilar y correr. **No** incluye todavía el reporte
-escrito completo, el diagrama de flujo de DES, la bitácora formal de
-pruebas con capturas, ni el cluster multi-máquina / OpenMP (extras). Ver
-la sección "Qué falta" al final.
+## Integrantes
+
+| Nombre | Carné |
+|---|---|
+| Roberto Barreda | 23354 |
+| Nina Najera | 231088 |
+| Jose Anton | 221041 |
 
 ## Requisitos
 
