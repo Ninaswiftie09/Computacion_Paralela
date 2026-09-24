@@ -1,4 +1,4 @@
-**Proyecto #2 — Computación Paralela y Distribuida**
+# **Proyecto #2 — Computación Paralela y Distribuida**
 
 ## Integrantes
 
