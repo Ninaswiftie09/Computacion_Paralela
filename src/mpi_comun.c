@@ -72,7 +72,11 @@ int mpi_preparar_busqueda(int *argc, char ***argv, const char *uso, int argument
     int num_procesos = 1;
     int cabecera[CAB_TOTAL] = {0};
 
-    MPI_Init(argc, argv);
+    /* FUNNELED permite que la versión híbrida tenga hilos mientras solo el
+     * hilo principal llama a MPI. Los programas de un solo hilo también lo
+     * cumplen, así que todos comparten esta inicialización. */
+    int nivel_hilos = 0;
+    MPI_Init_thread(argc, argv, MPI_THREAD_FUNNELED, &nivel_hilos);
     MPI_Comm_rank(MPI_COMM_WORLD, &id_proceso);
     MPI_Comm_size(MPI_COMM_WORLD, &num_procesos);
     memset(busqueda, 0, sizeof *busqueda);
