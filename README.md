@@ -30,6 +30,7 @@ make
 ./bin/secuencial textos/prueba.bin "es una prueba de" 24
 mpirun -np 4 ./bin/naive textos/prueba.bin "es una prueba de" 24
 mpirun -np 4 ./bin/ciclico textos/prueba.bin "es una prueba de" 24
+mpirun -np 4 ./bin/permutado textos/prueba.bin "es una prueba de" 24
 ```
 
 El último argumento es opcional. Limita la búsqueda a las llaves menores que 2^bits. Sin él se recorre el espacio completo de 2^56.
@@ -40,3 +41,4 @@ El último argumento es opcional. Limita la búsqueda a las llaves menores que 2
 | `secuencial` | Busca la llave en un solo proceso |
 | `naive` | Busca la llave con MPI. Cada proceso recorre un rango contiguo |
 | `ciclico` | Busca la llave con MPI. El proceso r prueba las llaves r, r+P, r+2P |
+| `permutado` | Busca la llave con MPI en orden revuelto. Acepta una semilla opcional |
