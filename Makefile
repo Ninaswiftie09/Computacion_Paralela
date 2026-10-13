@@ -20,8 +20,8 @@ bin/secuencial: src/secuencial.c $(BASE) $(CABECERAS) | bin
 bin/naive: src/naive.c $(BASE_MPI) $(CABECERAS_MPI) | bin
 	$(MPICC) $(CFLAGS) -o $@ src/naive.c $(BASE_MPI) $(LDLIBS)
 
-bin/ciclico: src/ciclico.c $(BASE) $(CABECERAS) | bin
-	$(MPICC) $(CFLAGS) -o $@ src/ciclico.c $(BASE) $(LDLIBS)
+bin/ciclico: src/ciclico.c $(BASE_MPI) $(CABECERAS_MPI) | bin
+	$(MPICC) $(CFLAGS) -o $@ src/ciclico.c $(BASE_MPI) $(LDLIBS)
 
 bin:
 	mkdir -p bin
