@@ -1,12 +1,27 @@
-CC=gcc
-MPICC=mpicc
-CFLAGS=-O2 -Wall -Wextra
-all: des_tool secuencial ciclico
-des_tool: des_tool.c des_lib.c des_lib.h
-	$(CC) $(CFLAGS) -o $@ des_tool.c des_lib.c -lcrypto
-secuencial: secuencial.c des_lib.c des_lib.h
-	$(CC) $(CFLAGS) -o $@ secuencial.c des_lib.c -lcrypto
-ciclico: ciclico.c des_lib.c des_lib.h
-	$(MPICC) $(CFLAGS) -o $@ ciclico.c des_lib.c -lcrypto
+CC = gcc
+MPICC = mpicc
+CFLAGS = -std=c11 -O2 -Wall -Wextra -Wpedantic
+LDLIBS = -lcrypto
+
+BASE = src/des.c src/comun.c
+CABECERAS = src/des.h src/comun.h
+PROGRAMAS = bin/cifrador bin/secuencial bin/ciclico
+
+all: $(PROGRAMAS)
+
+bin/cifrador: src/cifrador.c $(BASE) $(CABECERAS) | bin
+	$(CC) $(CFLAGS) -o $@ src/cifrador.c $(BASE) $(LDLIBS)
+
+bin/secuencial: src/secuencial.c $(BASE) $(CABECERAS) | bin
+	$(CC) $(CFLAGS) -o $@ src/secuencial.c $(BASE) $(LDLIBS)
+
+bin/ciclico: src/ciclico.c $(BASE) $(CABECERAS) | bin
+	$(MPICC) $(CFLAGS) -o $@ src/ciclico.c $(BASE) $(LDLIBS)
+
+bin:
+	mkdir -p bin
+
 clean:
-	rm -f des_tool secuencial ciclico *.bin
+	rm -rf bin
+
+.PHONY: all clean

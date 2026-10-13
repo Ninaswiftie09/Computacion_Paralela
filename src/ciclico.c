@@ -13,7 +13,7 @@
  *
  * Uso: mpirun -np P ./ciclico <cifrado.bin> "<frase>" [bits_espacio]
  */
-#include "des_lib.h"
+#include "des.h"
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,16 +31,16 @@ int main(int argc, char **argv) {
     int bad = 0;
     unsigned char *cipher = NULL, *scratch = NULL;
     long len = 0;
-    int bits = DES_KEY_BITS;
+    int bits = DES_BITS_LLAVE;
     if (argc < 3 || argc > 4) bad = 1;
     else {
         if (argc == 4) bits = atoi(argv[3]);
-        if (bits < 1 || bits > DES_KEY_BITS) bad = 1;
+        if (bits < 1 || bits > DES_BITS_LLAVE) bad = 1;
         FILE *f = bad ? NULL : fopen(argv[1], "rb");
         if (!f) bad = 1;
         else {
             fseek(f, 0, SEEK_END); len = ftell(f); rewind(f);
-            if (len <= 0 || len % DES_BLOCK) bad = 1;
+            if (len <= 0 || len % DES_TAM_BLOQUE) bad = 1;
             else {
                 cipher = calloc(len + 1, 1); scratch = malloc(len + 1);
                 if (!cipher || !scratch || fread(cipher, 1, len, f) != (size_t)len) bad = 1;
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
     for (uint64_t k = (uint64_t)rank; k < limit && !stop; k += (uint64_t)p) {
         my_iters++;
-        if (des_try_key(k, cipher, len, kw, scratch)) {
+        if (des_probar_llave(k, cipher, len, kw, scratch)) {
             found = k; i_found = 1;
             for (int d = 0; d < p; d++)
                 if (d != rank) MPI_Send(&found, 1, MPI_UINT64_T, d, TAG_FOUND, MPI_COMM_WORLD);
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
         for (int r = 0; r < p; r++) if (all_iters[r] > maxit) maxit = all_iters[r];
         printf("Acercamiento: CICLICO | procesos: %d | archivo: %s | frase: \"%s\"\n", p, argv[1], kw);
         if (anyfound) {
-            des_decrypt(key_all, cipher, len);
+            des_descifrar(key_all, cipher, len);
             printf("Llave encontrada: %llu\nTexto: \"%s\"\n", (unsigned long long)key_all, cipher);
         } else printf("Llave NO encontrada en 2^%d llaves\n", bits);
         printf("Iteraciones por proceso:");
