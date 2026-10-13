@@ -5,7 +5,9 @@ LDLIBS = -lcrypto
 
 BASE = src/des.c src/comun.c
 CABECERAS = src/des.h src/comun.h
-PROGRAMAS = bin/cifrador bin/secuencial bin/ciclico
+BASE_MPI = $(BASE) src/mpi_comun.c
+CABECERAS_MPI = $(CABECERAS) src/mpi_comun.h
+PROGRAMAS = bin/cifrador bin/secuencial bin/naive bin/ciclico
 
 all: $(PROGRAMAS)
 
@@ -14,6 +16,9 @@ bin/cifrador: src/cifrador.c $(BASE) $(CABECERAS) | bin
 
 bin/secuencial: src/secuencial.c $(BASE) $(CABECERAS) | bin
 	$(CC) $(CFLAGS) -o $@ src/secuencial.c $(BASE) $(LDLIBS)
+
+bin/naive: src/naive.c $(BASE_MPI) $(CABECERAS_MPI) | bin
+	$(MPICC) $(CFLAGS) -o $@ src/naive.c $(BASE_MPI) $(LDLIBS)
 
 bin/ciclico: src/ciclico.c $(BASE) $(CABECERAS) | bin
 	$(MPICC) $(CFLAGS) -o $@ src/ciclico.c $(BASE) $(LDLIBS)

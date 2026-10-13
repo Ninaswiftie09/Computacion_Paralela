@@ -28,6 +28,7 @@ make
 ./bin/cifrador cifrar textos/prueba.txt textos/prueba.bin 42
 ./bin/cifrador descifrar textos/prueba.bin 42
 ./bin/secuencial textos/prueba.bin "es una prueba de" 24
+mpirun -np 4 ./bin/naive textos/prueba.bin "es una prueba de" 24
 mpirun -np 4 ./bin/ciclico textos/prueba.bin "es una prueba de" 24
 ```
 
@@ -37,4 +38,5 @@ El último argumento es opcional. Limita la búsqueda a las llaves menores que 2
 |---|---|
 | `cifrador` | Cifra un archivo de texto con una llave, o descifra y muestra el texto |
 | `secuencial` | Busca la llave en un solo proceso |
+| `naive` | Busca la llave con MPI. Cada proceso recorre un rango contiguo |
 | `ciclico` | Busca la llave con MPI. El proceso r prueba las llaves r, r+P, r+2P |
