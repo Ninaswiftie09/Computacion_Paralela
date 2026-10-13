@@ -44,3 +44,13 @@ El último argumento es opcional. Limita la búsqueda a las llaves menores que 2
 | `ciclico` | Busca la llave con MPI. El proceso r prueba las llaves r, r+P, r+2P |
 | `permutado` | Busca la llave con MPI en orden revuelto. Acepta una semilla opcional |
 | `hibrido` | Busca la llave con MPI y OpenMP. Los hilos se fijan con `OMP_NUM_THREADS` |
+
+## Informe y pruebas
+
+El informe está en `docs/informe/Informe_Proyecto2.docx`. La bitácora de tiempos y las gráficas están en `resultados/` y `docs/informe/img/`.
+
+```bash
+bash scripts/pruebas_guia.sh   # evidencia de las partes B.1 y B.2
+bash scripts/bitacora.sh       # mide todos los programas y escribe el CSV
+python scripts/graficas.py     # genera el resumen y las gráficas
+```
