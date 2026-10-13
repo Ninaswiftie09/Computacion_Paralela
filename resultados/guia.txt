@@ -1,0 +1,33 @@
+
+===== B.1  Cifrar y descifrar con la llave 42 =====
+Archivo de texto: textos/prueba.txt (32 bytes)
+Llave: 42
+Archivo cifrado: /tmp/tmp.8MJvIX7Ais/c42.bin (32 bytes)
+Primeros 32 bytes del cifrado en hexadecimal:
+e7 c0 4c c3 9f e6 6e b1 48 01 b9 aa dd ab eb f9
+4a 2b 76 e5 e4 07 75 e6 4f ab 95 1b 1f 46 35 6e
+Archivo cifrado: /tmp/tmp.8MJvIX7Ais/c42.bin (32 bytes)
+Llave: 42
+Texto descifrado: Esta es una prueba de proyecto 2
+Con una llave incorrecta (43) sale texto ilegible:
+Archivo cifrado: /tmp/tmp.8MJvIX7Ais/c42.bin (32 bytes)
+Llave: 43
+Texto descifrado: émÑø””›91u:¯¤÷Åy.t.’Ð„oR.ª±ƒ^m.Æ
+
+===== B.2  Romper el cifrado con 4 procesos =====
+--- a. llave 123456
+Procesos: 4
+Llave encontrada: 123456
+Proceso que la encontrÃ³: 0
+Iteraciones del proceso ganador: 123457
+Tiempo: 0.052717 s
+--- c. llave 18014398509481984 (2^54, primera del proceso 1)
+Procesos: 4
+Llave encontrada: 18014398509481984
+Proceso que la encontrÃ³: 1
+Iteraciones del proceso ganador: 1
+Tiempo: 0.000457 s
+--- b. llave 18014398509481983 (2^54 - 1, Ãºltima del proceso 0)
+Se corta a los 20 s para no esperar indefinidamente.
+No terminÃ³ en 20 s. El proceso 0 debe recorrer sus 2^54 llaves,
+unos 6 mil millones de segundos a la velocidad medida.
