@@ -1,13 +1,5 @@
-# Proyecto 2 – Parte 1 (Persona 1): DES, versión secuencial y acercamiento cíclico
+# Proyecto 2
 
-## Requisitos (Ubuntu / Pop!_OS)
-```bash
-sudo apt install build-essential libssl-dev openmpi-bin libopenmpi-dev
-```
-
-## Compilar
-```bash
-make
 ```
 
 ## Uso
