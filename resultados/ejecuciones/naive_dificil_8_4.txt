@@ -1,0 +1,13 @@
+$ mpirun --use-hwthread-cpus --bind-to none -np 8 ./bin/naive /tmp/tmp.kHu23kblmk/dificil.bin es\ una\ prueba\ de 22 
+Programa: naive
+Procesos: 8
+Archivo cifrado: /tmp/tmp.kHu23kblmk/dificil.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Llave encontrada: 921826
+Texto descifrado: Esta es una prueba de proyecto 2
+Proceso que la encontró: 1
+Iteraciones por proceso: 351232 397539 353280 404480 379904 397312 377856 367616
+Iteraciones del proceso ganador: 397539
+Tiempo: 0.313699 s
+Velocidad: 9.66 millones de llaves por segundo

@@ -1,0 +1,14 @@
+$ mpirun --use-hwthread-cpus --bind-to none -np 8 ./bin/permutado /tmp/tmp.kHu23kblmk/media.bin es\ una\ prueba\ de 22 1 
+Programa: permutado
+Procesos: 8
+Archivo cifrado: /tmp/tmp.kHu23kblmk/media.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Semilla: 1
+Llave encontrada: 2621440
+Texto descifrado: Esta es una prueba de proyecto 2
+Proceso que la encontró: 1
+Iteraciones por proceso: 516096 517883 451584 472064 518144 468992 465920 524288
+Iteraciones del proceso ganador: 517883
+Tiempo: 0.361552 s
+Velocidad: 10.88 millones de llaves por segundo

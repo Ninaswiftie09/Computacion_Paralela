@@ -1,0 +1,44 @@
+$ ./bin/secuencial temporal.bin 'es una prueba de' 16 (llave 65535)
+Programa: secuencial
+Procesos: 1
+Archivo cifrado: /tmp/tmp.R7CCIU7r1U/c.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^16 (65536 llaves)
+Llave encontrada: 65535
+Texto descifrado: Esta es una prueba de proyecto 2
+Iteraciones: 65536
+Tiempo: 0.033718 s
+Velocidad: 1.94 millones de llaves por segundo
+$ ./bin/secuencial temporal.bin 'es una prueba de' 20 (llave 1048575)
+Programa: secuencial
+Procesos: 1
+Archivo cifrado: /tmp/tmp.R7CCIU7r1U/c.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^20 (1048576 llaves)
+Llave encontrada: 1048575
+Texto descifrado: Esta es una prueba de proyecto 2
+Iteraciones: 1048576
+Tiempo: 0.514779 s
+Velocidad: 2.04 millones de llaves por segundo
+$ ./bin/secuencial temporal.bin 'es una prueba de' 22 (llave 4194303)
+Programa: secuencial
+Procesos: 1
+Archivo cifrado: /tmp/tmp.R7CCIU7r1U/c.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Llave encontrada: 4194303
+Texto descifrado: Esta es una prueba de proyecto 2
+Iteraciones: 4194304
+Tiempo: 2.213611 s
+Velocidad: 1.89 millones de llaves por segundo
+$ ./bin/secuencial temporal.bin 'es una prueba de' 24 (llave 16777215)
+Programa: secuencial
+Procesos: 1
+Archivo cifrado: /tmp/tmp.R7CCIU7r1U/c.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^24 (16777216 llaves)
+Llave encontrada: 16777215
+Texto descifrado: Esta es una prueba de proyecto 2
+Iteraciones: 16777216
+Tiempo: 8.716800 s
+Velocidad: 1.92 millones de llaves por segundo

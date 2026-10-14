@@ -1,0 +1,7 @@
+$ bash scripts/verificar.sh
+Aviso: una frase de menos de 4 caracteres puede aparecer con una llave incorrecta
+Aviso: una frase de menos de 4 caracteres puede aparecer con una llave incorrecta
+Aviso: una frase de menos de 4 caracteres puede aparecer con una llave incorrecta
+Aviso: una frase de menos de 4 caracteres puede aparecer con una llave incorrecta
+Aviso: una frase de menos de 4 caracteres puede aparecer con una llave incorrecta
+Verificación completada: 108 casos MPI y 5 recuperaciones secuenciales.

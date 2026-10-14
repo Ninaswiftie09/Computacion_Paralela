@@ -1,0 +1,15 @@
+$ mpirun --use-hwthread-cpus --bind-to none -np 8 ./bin/dinamico /tmp/tmp.kHu23kblmk/dificil.bin es\ una\ prueba\ de 22 
+Programa: dinamico
+Procesos: 8
+Archivo cifrado: /tmp/tmp.kHu23kblmk/dificil.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Llaves por bloque: 4096
+Trabajadores: 7
+Llave encontrada: 921826
+Texto descifrado: Esta es una prueba de proyecto 2
+Proceso que la encontró: 3
+Iteraciones por proceso: 0 139264 118784 131299 122880 135168 143360 131072
+Iteraciones del proceso ganador: 131299
+Tiempo: 0.117781 s
+Velocidad: 7.83 millones de llaves por segundo

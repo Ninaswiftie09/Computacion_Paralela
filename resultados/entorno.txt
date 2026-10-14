@@ -1,0 +1,17 @@
+$ uname -sr
+Linux 5.15.167.4-microsoft-standard-WSL2
+$ lscpu (resumen)
+CPU(s):                               8
+On-line CPU(s) list:                  0-7
+Model name:                           11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz
+Thread(s) per core:                   2
+Core(s) per socket:                   4
+Socket(s):                            1
+$ gcc --version
+gcc (Debian 14.2.0-19) 14.2.0
+$ mpirun --version
+mpirun (Open MPI) 5.0.7
+$ openssl version
+OpenSSL 3.5.7 9 Jun 2026 (Library: OpenSSL 3.5.7 9 Jun 2026)
+Ejecución en contenedor Debian 13 sobre Docker Desktop y WSL2.
+MPI sin fijación de procesos a núcleos: --bind-to none.

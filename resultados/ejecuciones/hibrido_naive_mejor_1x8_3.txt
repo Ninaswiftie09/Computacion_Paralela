@@ -1,0 +1,14 @@
+$ env OMP_NUM_THREADS=8 mpirun --use-hwthread-cpus --bind-to none -np 1 ./bin/hibrido /tmp/tmp.kHu23kblmk/naive_mejor.bin es\ una\ prueba\ de 22 
+Programa: hibrido
+Procesos: 1
+Archivo cifrado: /tmp/tmp.kHu23kblmk/naive_mejor.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Hilos por proceso: 8
+Llave encontrada: 1048577
+Texto descifrado: Esta es una prueba de proyecto 2
+Proceso que la encontró: 0
+Iteraciones por proceso: 1067645
+Iteraciones del proceso ganador: 1067645
+Tiempo: 0.109360 s
+Velocidad: 9.76 millones de llaves por segundo

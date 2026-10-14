@@ -1,0 +1,9 @@
+$ ./bin/cifrador cifrar textos/prueba.txt temporal.bin 42
+Archivo de texto: textos/prueba.txt (32 bytes)
+Llave: 42
+Archivo cifrado: /tmp/tmp.R7CCIU7r1U/c42.bin (32 bytes)
+Primeros 32 bytes del cifrado en hexadecimal:
+e7 c0 4c c3 9f e6 6e b1 48 01 b9 aa dd ab eb f9
+4a 2b 76 e5 e4 07 75 e6 4f ab 95 1b 1f 46 35 6e
+$ openssl enc -des-ecb -K 5401010101010101 -nopad -provider legacy -provider default
+Comparación byte a byte: archivos iguales.

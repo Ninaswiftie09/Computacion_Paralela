@@ -1,0 +1,14 @@
+$ env OMP_NUM_THREADS=2 mpirun --use-hwthread-cpus --bind-to none -np 4 ./bin/hibrido /tmp/tmp.kHu23kblmk/facil.bin es\ una\ prueba\ de 22 
+Programa: hibrido
+Procesos: 4
+Archivo cifrado: /tmp/tmp.kHu23kblmk/facil.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Hilos por proceso: 2
+Llave encontrada: 2097153
+Texto descifrado: Esta es una prueba de proyecto 2
+Proceso que la encontró: 0
+Iteraciones por proceso: 528075 583560 510665 537448
+Iteraciones del proceso ganador: 528075
+Tiempo: 0.199592 s
+Velocidad: 10.82 millones de llaves por segundo

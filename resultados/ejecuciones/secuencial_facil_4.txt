@@ -1,0 +1,11 @@
+$ ./bin/secuencial /tmp/tmp.kHu23kblmk/facil.bin es\ una\ prueba\ de 22 
+Programa: secuencial
+Procesos: 1
+Archivo cifrado: /tmp/tmp.kHu23kblmk/facil.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Llave encontrada: 2097153
+Texto descifrado: Esta es una prueba de proyecto 2
+Iteraciones: 2097154
+Tiempo: 0.974332 s
+Velocidad: 2.15 millones de llaves por segundo

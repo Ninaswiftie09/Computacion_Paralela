@@ -1,0 +1,11 @@
+$ ./bin/secuencial /tmp/tmp.kHu23kblmk/naive_mejor.bin es\ una\ prueba\ de 22 
+Programa: secuencial
+Procesos: 1
+Archivo cifrado: /tmp/tmp.kHu23kblmk/naive_mejor.bin
+Frase clave: "es una prueba de"
+Espacio de llaves: 2^22 (4194304 llaves)
+Llave encontrada: 1048577
+Texto descifrado: Esta es una prueba de proyecto 2
+Iteraciones: 1048578
+Tiempo: 0.465466 s
+Velocidad: 2.25 millones de llaves por segundo

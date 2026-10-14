@@ -1,0 +1,9 @@
+$ make -B
+mkdir -p bin
+gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -o bin/cifrador src/cifrador.c src/des.c src/comun.c -lcrypto
+gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -o bin/secuencial src/secuencial.c src/des.c src/comun.c -lcrypto
+mpicc -std=c11 -O2 -Wall -Wextra -Wpedantic -o bin/naive src/naive.c src/des.c src/comun.c src/mpi_comun.c -lcrypto
+mpicc -std=c11 -O2 -Wall -Wextra -Wpedantic -o bin/ciclico src/ciclico.c src/des.c src/comun.c src/mpi_comun.c -lcrypto
+mpicc -std=c11 -O2 -Wall -Wextra -Wpedantic -o bin/permutado src/permutado.c src/des.c src/comun.c src/mpi_comun.c -lcrypto
+mpicc -std=c11 -O2 -Wall -Wextra -Wpedantic -o bin/dinamico src/dinamico.c src/des.c src/comun.c src/mpi_comun.c -lcrypto
+mpicc -std=c11 -O2 -Wall -Wextra -Wpedantic -fopenmp -o bin/hibrido src/hibrido.c src/des.c src/comun.c src/mpi_comun.c -lcrypto
