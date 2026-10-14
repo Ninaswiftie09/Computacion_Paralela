@@ -8,7 +8,7 @@ BASE = src/des.c src/comun.c
 CABECERAS = src/des.h src/comun.h
 BASE_MPI = $(BASE) src/mpi_comun.c
 CABECERAS_MPI = $(CABECERAS) src/mpi_comun.h
-PROGRAMAS = bin/cifrador bin/secuencial bin/naive bin/ciclico bin/permutado bin/hibrido
+PROGRAMAS = bin/cifrador bin/secuencial bin/naive bin/ciclico bin/permutado bin/dinamico bin/hibrido
 
 all: $(PROGRAMAS)
 
@@ -29,6 +29,9 @@ bin/permutado: src/permutado.c $(BASE_MPI) $(CABECERAS_MPI) | bin
 
 bin/hibrido: src/hibrido.c $(BASE_MPI) $(CABECERAS_MPI) | bin
 	$(MPICC) $(CFLAGS) $(OPENMP) -o $@ src/hibrido.c $(BASE_MPI) $(LDLIBS)
+
+bin/dinamico: src/dinamico.c $(BASE_MPI) $(CABECERAS_MPI) | bin
+	$(MPICC) $(CFLAGS) -o $@ src/dinamico.c $(BASE_MPI) $(LDLIBS)
 
 bin:
 	mkdir -p bin
