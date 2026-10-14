@@ -65,13 +65,5 @@ python3 scripts/graficas.py
 python3 scripts/catalogo.py
 ```
 
-El primer script recompila, registra el entorno, prueba entradas y recuperación de llaves, ejecuta B.1/B.2 y contrasta el cifrado con OpenSSL. B.2 usa cuatro procesos y registra un límite de 20 segundos para el caso que no termina.
-
-La bitácora usa cinco tipos de llave, cinco repeticiones y 1, 2, 4 y 8 procesos. Incluye cinco configuraciones híbridas. Cada fila guarda llave, bits, procesos, hilos, tiempo, semilla y tamaño de bloque cuando corresponden. Las salidas completas quedan en resultados/ejecuciones/. Las tablas y gráficas se calculan con los datos de esa ejecución. No se deben combinar mediciones de entornos distintos en un mismo speedup.
-
-El tiempo mide la búsqueda y la detención de los procesos. Excluye la carga del archivo y las operaciones finales que reúnen e imprimen resultados. La comparación de algoritmos se hace con el mismo texto, frase y espacio. En el permutado se cambia la semilla entre repeticiones para observar la variación del recorrido.
-
-## Sincronización
-
-MPI tiene una barrera explícita de arranque. El cierre de mensajes espera todas las recepciones y envíos pendientes. El híbrido usa una bandera atómica, contadores por hilo y una barrera explícita antes de reunirlos. No usa ciclos OpenMP ni reducciones con barreras implícitas. OpenMP exige la unión de los hilos al salir de una región parallel, y esa unión no admite nowait.
+`evidencias.sh` recompila y registra entorno, verificación de entradas, B.1, B.2 y la comparación con OpenSSL. `bitacora.sh` mide los programas con cinco llaves, cinco repeticiones y 1, 2, 4 y 8 procesos, y guarda cada corrida en `resultados/ejecuciones/`. Las tablas y figuras salen de esos datos. El detalle de la comunicación y la sincronización está en el informe.
 

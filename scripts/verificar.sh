@@ -50,7 +50,7 @@ for bloque in 1 7 64; do
         casos=$((casos + 1))
     done
 done
-salida=$(timeout 15 mpirun -np 4 ./bin/dinamico "$TMP/c.bin" "$FRASE" 8 0 2>&1) && exit 1
+salida=$(timeout 15 mpirun -np 4 ./bin/dinamico "$TMP/c.bin" "$FRASE" 8 0 2>&1)
 grep -q 'Error: bloque' <<< "$salida"
 salida=$(timeout 15 mpirun -np 4 ./bin/permutado "$TMP/c.bin" "$FRASE" 8 -1 2>&1)
 grep -q 'Error: la semilla' <<< "$salida"

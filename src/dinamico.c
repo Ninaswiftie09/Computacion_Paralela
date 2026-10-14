@@ -85,7 +85,7 @@ int main(int argc, char **argv)
         }
         busqueda_liberar(&busqueda);
         MPI_Finalize();
-        return SALIDA_ERROR;
+        return SALIDA_MPI;
     }
     mpi_imprimir_datos(&busqueda, "dinamico");
     if (busqueda.id_proceso == 0) {
