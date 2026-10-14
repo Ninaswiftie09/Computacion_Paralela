@@ -1,4 +1,4 @@
-# Proyecto 2: búsqueda de llave DES con MPI
+﻿# Proyecto 2: búsqueda de llave DES con MPI
 
 Computación Paralela y Distribuida, UVG, Sección 20.
 
@@ -75,6 +75,3 @@ El tiempo mide la búsqueda y la detención de los procesos. Excluye la carga de
 
 MPI tiene una barrera explícita de arranque. El cierre de mensajes espera todas las recepciones y envíos pendientes. El híbrido usa una bandera atómica, contadores por hilo y una barrera explícita antes de reunirlos. No usa ciclos OpenMP ni reducciones con barreras implícitas. OpenMP exige la unión de los hilos al salir de una región parallel, y esa unión no admite nowait.
 
-## Informe
-
-El informe de entrega es docs/informe/informe.tex. Se compila con pdfLaTeX dos veces desde docs/informe/. Las carpetas img/, tablas/ y capturas/ deben permanecer junto al archivo al subirlo a Overleaf. Las capturas corresponden a registros de ejecuciones reales. El Word conserva una versión anterior y no es la versión final de entrega.
