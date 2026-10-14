@@ -8,7 +8,7 @@
 #
 # La llave 2^54 - 1 cae al final del rango del proceso 0 con 4 procesos, así
 # que no termina en tiempo razonable. Se corta con un límite de tiempo.
-set -u
+set -euo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 FRASE="es una prueba de"
@@ -40,10 +40,16 @@ mpirun -np 4 ./bin/naive "$TMP/c.bin" "$FRASE" | grep -E "Llave|Proceso|Iteracio
 ./bin/cifrador cifrar "$TEXTO" "$TMP/b.bin" 18014398509481983 > /dev/null
 echo "--- b. llave 18014398509481983 (2^54 - 1, última del proceso 0)"
 echo "Se corta a los $LIMITE_B s para no esperar indefinidamente."
-if timeout -k 2 "$LIMITE_B" mpirun -np 4 ./bin/naive "$TMP/b.bin" "$FRASE" \
-        | grep -E "Llave|Tiempo"; then
-    :
-else
+set +e
+timeout -k 2 "$LIMITE_B" mpirun -np 4 ./bin/naive "$TMP/b.bin" "$FRASE" > "$TMP/b.log" 2>&1
+estado=$?
+set -e
+if [ "$estado" -eq 124 ] || [ "$estado" -eq 137 ]; then
     echo "No terminó en $LIMITE_B s. El proceso 0 debe recorrer sus 2^54 llaves,"
-    echo "unos 6 mil millones de segundos a la velocidad medida."
+    echo "por lo que se registra el tiempo como mayor que $LIMITE_B s."
+elif [ "$estado" -ne 0 ]; then
+    cat "$TMP/b.log" >&2
+    exit "$estado"
+else
+    cat "$TMP/b.log"
 fi

@@ -36,14 +36,19 @@ COLOR = {
     "ciclico": "#2ca02c",
     "permutado": "#d62728",
     "hibrido": "#9467bd",
+    "dinamico": "#e69500",
 }
 
 
 def cargar(ruta):
     datos = pd.read_csv(ruta)
     for columna in ("iter_ganador", "segundos"):
-        datos[columna] = pd.to_numeric(datos[columna], errors="coerce")
-    return datos.dropna(subset=["segundos"])
+        datos[columna] = pd.to_numeric(datos[columna], errors="raise")
+    if datos[["iter_ganador", "segundos"]].isna().any().any() or (datos.segundos <= 0).any():
+        raise ValueError("La bitácora tiene tiempos o iteraciones incompletos")
+    if datos.bits.nunique() != 1:
+        raise ValueError("Se requiere una serie con el mismo espacio de búsqueda")
+    return datos
 
 
 def etiqueta_config(fila):
@@ -57,7 +62,7 @@ def etiqueta_config(fila):
 
 def resumen(datos):
     """Promedia las repeticiones y agrega el speedup contra el secuencial."""
-    claves = ["programa", "dificultad", "bits", "procesos", "hilos"]
+    claves = ["programa", "dificultad", "llave", "bits", "procesos", "hilos"]
     agregado = (
         datos.groupby(claves, as_index=False)
         .agg(
@@ -68,14 +73,11 @@ def resumen(datos):
         )
         .fillna({"segundos_desv": 0.0})
     )
-    base = (
-        agregado[agregado["programa"] == "secuencial"]
-        .set_index("dificultad")["segundos_media"]
-        .to_dict()
-    )
-    agregado["speedup"] = agregado.apply(
-        lambda f: base.get(f["dificultad"], np.nan) / f["segundos_media"], axis=1
-    )
+    base = agregado[agregado["programa"] == "secuencial"][
+        ["dificultad", "llave", "bits", "segundos_media"]
+    ].rename(columns={"segundos_media": "tiempo_base"})
+    agregado = agregado.merge(base, on=["dificultad", "llave", "bits"], validate="many_to_one")
+    agregado["speedup"] = agregado["tiempo_base"] / agregado["segundos_media"]
     agregado["config"] = agregado.apply(etiqueta_config, axis=1)
     return agregado
 
@@ -90,7 +92,7 @@ def grafica_speedup_procesos(res):
     if len(difs) == 1:
         ejes = [ejes]
     for eje, dif in zip(ejes, difs):
-        for programa in ("ciclico", "permutado"):
+        for programa in ("ciclico", "permutado", "dinamico"):
             sub = res[(res["dificultad"] == dif) & (res["programa"] == programa)]
             sub = sub.sort_values("procesos")
             if not sub.empty:
@@ -103,7 +105,7 @@ def grafica_speedup_procesos(res):
         eje.grid(True, alpha=0.3)
     ejes[0].set_ylabel("Speedup contra secuencial")
     ejes[-1].legend()
-    fig.suptitle("Speedup del cíclico y el permutado por número de procesos")
+    fig.suptitle("Speedup por número de procesos")
     fig.tight_layout()
     fig.savefig(DIR_IMG / "speedup_procesos.png", dpi=130)
     plt.close(fig)
@@ -113,9 +115,9 @@ def grafica_consistencia(res):
     """Speedup de cada acercamiento con 4 procesos, por dificultad.
     Muestra que el naive es irregular y el cíclico y el permutado son estables."""
     difs = [d for d in ORDEN_DIF if d in res["dificultad"].unique()]
-    programas = ("naive", "ciclico", "permutado")
+    programas = ("naive", "ciclico", "permutado", "dinamico")
     x = np.arange(len(difs))
-    ancho = 0.25
+    ancho = 0.20
     fig, eje = plt.subplots(figsize=(9, 4.5))
     for i, programa in enumerate(programas):
         alturas = []
@@ -123,7 +125,7 @@ def grafica_consistencia(res):
             sub = res[(res["dificultad"] == dif) & (res["programa"] == programa)
                       & (res["procesos"] == 4)]
             alturas.append(sub["speedup"].iloc[0] if not sub.empty else 0)
-        eje.bar(x + (i - 1) * ancho, alturas, ancho, color=COLOR[programa], label=programa)
+        eje.bar(x + (i - 1.5) * ancho, alturas, ancho, color=COLOR[programa], label=programa)
     eje.axhline(4, color="#bbbbbb", linestyle="--", label="speedup = 4")
     eje.set_yscale("log")
     eje.set_xticks(x)
@@ -141,9 +143,9 @@ def grafica_iteraciones(res):
     """Iteraciones del proceso ganador con 4 procesos. El naive depende de la
     posición de la llave, el permutado no."""
     difs = [d for d in ORDEN_DIF if d in res["dificultad"].unique()]
-    programas = ("naive", "ciclico", "permutado")
+    programas = ("naive", "ciclico", "permutado", "dinamico")
     x = np.arange(len(difs))
-    ancho = 0.25
+    ancho = 0.20
     fig, eje = plt.subplots(figsize=(9, 4.5))
     for i, programa in enumerate(programas):
         alturas = []
@@ -151,7 +153,7 @@ def grafica_iteraciones(res):
             sub = res[(res["dificultad"] == dif) & (res["programa"] == programa)
                       & (res["procesos"] == 4)]
             alturas.append(sub["iter_media"].iloc[0] if not sub.empty else 0)
-        eje.bar(x + (i - 1) * ancho, alturas, ancho, color=COLOR[programa], label=programa)
+        eje.bar(x + (i - 1.5) * ancho, alturas, ancho, color=COLOR[programa], label=programa)
     eje.set_yscale("log")
     eje.set_xticks(x)
     eje.set_xticklabels([ETIQUETA_DIF[d] for d in difs])
@@ -197,6 +199,45 @@ def grafica_hibrido(res):
     plt.close(fig)
 
 
+def grafica_tiempos(res):
+    """Dispersión entre repeticiones, incluida la variación entre semillas."""
+    fig, eje = plt.subplots(figsize=(10, 4.5))
+    difs = [d for d in ORDEN_DIF if d in res["dificultad"].unique()]
+    for i, programa in enumerate(("naive", "ciclico", "permutado", "dinamico")):
+        sub = res[(res.programa == programa) & (res.procesos == 4)].set_index("dificultad").reindex(difs)
+        eje.errorbar(np.arange(len(difs)) + (i - 1.5) * .15,
+                     sub.segundos_media, yerr=sub.segundos_desv, fmt="o",
+                     capsize=3, label=programa, color=COLOR[programa])
+    eje.set_xticks(range(len(difs)), [ETIQUETA_DIF[d] for d in difs])
+    eje.set_ylabel("Tiempo medio (s) y desviación estándar")
+    eje.set_title("Variación del tiempo con cuatro procesos")
+    eje.legend()
+    eje.grid(alpha=.3)
+    fig.tight_layout()
+    fig.savefig(DIR_IMG / "tiempos_variacion.png", dpi=150)
+    plt.close(fig)
+
+
+def tablas_latex(res):
+    """Tablas del informe calculadas directamente de las mismas mediciones."""
+    destino = DIR_IMG.parent / "tablas"
+    destino.mkdir(exist_ok=True)
+    nombres = {"naive": "Naive", "ciclico": "Cíclico", "permutado": "Permutado",
+               "dinamico": "Dinámico", "hibrido": "Híbrido", "secuencial": "Secuencial"}
+    filas = []
+    for dif in ORDEN_DIF:
+        sub = res[(res.dificultad == dif) & (res.hilos == 1) &
+                  ((res.procesos == 4) | (res.programa == "secuencial"))]
+        for _, f in sub.sort_values("programa").iterrows():
+            filas.append(f"{ETIQUETA_DIF[dif]} & {nombres[f.programa]} & {f.segundos_media:.4f} & "
+                         f"{f.segundos_desv:.4f} & {f.speedup:.2f}" + r" \\")
+    (destino / "comparacion.tex").write_text("\n".join(filas) + "\n", encoding="utf-8")
+    filas = []
+    for _, f in res[(res.programa == "hibrido") & (res.dificultad == "media")].sort_values(["procesos", "hilos"]).iterrows():
+        filas.append(f"{int(f.procesos)} & {int(f.hilos)} & {f.segundos_media:.4f} & {f.segundos_desv:.4f} & {f.speedup:.2f}" + r" \\")
+    (destino / "hibrido.tex").write_text("\n".join(filas) + "\n", encoding="utf-8")
+
+
 def main():
     if not RUTA_CSV.exists():
         sys.exit(f"No existe {RUTA_CSV}. Corre primero scripts/bitacora.sh")
@@ -204,11 +245,13 @@ def main():
     res = resumen(datos)
 
     ruta_resumen = RUTA_CSV.with_name("resumen.csv")
-    columnas = ["programa", "dificultad", "procesos", "hilos", "corridas",
+    columnas = ["programa", "dificultad", "bits", "llave", "procesos", "hilos", "corridas",
                 "segundos_media", "segundos_desv", "iter_media", "speedup"]
     res.sort_values(["dificultad", "programa", "procesos", "hilos"])[columnas].to_csv(
         ruta_resumen, index=False, float_format="%.4f")
 
+    tablas_latex(res)
+    grafica_tiempos(res)
     grafica_speedup_procesos(res)
     grafica_consistencia(res)
     grafica_iteraciones(res)

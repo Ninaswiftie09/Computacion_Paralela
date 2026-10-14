@@ -1,3 +1,11 @@
 bin/
 textos/*.bin
 *.exe
+tmp/
+output/
+docs/informe/*.aux
+docs/informe/*.log
+docs/informe/*.out
+docs/informe/*.toc
+__pycache__/
+*.pyc
