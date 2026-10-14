@@ -39,7 +39,7 @@ int main(int argc, char **argv)
                              busqueda.trabajo)) {
             local.encontrada = 1;
             local.llave = llave;
-            aviso_enviar(&busqueda, llave);
+            aviso_enviar(&busqueda, &aviso, llave);
             break;
         }
         if (local.iteraciones % INTERVALO_REVISION == 0 && aviso_llego(&aviso)) {

@@ -22,6 +22,7 @@
 #include "mpi_comun.h"
 
 #include <omp.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -93,15 +94,27 @@ int main(int argc, char **argv)
     }
 
     unsigned char **trabajos = reservar_trabajos(hilos, busqueda.longitud + 1);
+    uint64_t *cuentas = calloc((size_t)hilos, sizeof *cuentas);
+    int memoria_local = trabajos != NULL && cuentas != NULL;
+    int memoria_global = 0;
+    MPI_Allreduce(&memoria_local, &memoria_global, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+    if (!memoria_global) {
+        if (busqueda.id_proceso == PROCESO_RAIZ) {
+            fprintf(stderr, "Error: no hay memoria para los hilos\n");
+        }
+        liberar_trabajos(trabajos, hilos);
+        free(cuentas);
+        busqueda_liberar(&busqueda);
+        MPI_Finalize();
+        return SALIDA_ERROR;
+    }
 
     Aviso aviso;
     ResultadoLocal local = {0, 0, 0, 0.0};
     aviso_abrir(&aviso);
 
-    /* Bandera de detención compartida. Es volatile para que todos los hilos
-     * relean su valor. Solo pasa de 0 a 1, así que una lectura adelantada a
-     * lo sumo hace unas iteraciones de más. */
-    volatile int detener = trabajos == NULL;
+    /* Las lecturas y escrituras de la bandera son atómicas. */
+    atomic_int detener = ATOMIC_VAR_INIT(0);
     int encontrada = 0;
     uint64_t llave_hallada = 0;
     uint64_t iteraciones_totales = 0;
@@ -109,14 +122,22 @@ int main(int argc, char **argv)
 
     double inicio = mpi_iniciar_cronometro();
 
-    #pragma omp parallel num_threads(hilos) reduction(+ : iteraciones_totales)
+    omp_set_dynamic(0);
+    #pragma omp parallel num_threads(hilos) shared(detener, encontrada, llave_hallada, cuentas)
     {
         int id_hilo = omp_get_thread_num();
+        if (omp_get_num_threads() != hilos) {
+            if (id_hilo == 0) {
+                fprintf(stderr, "Error: OpenMP no creó la cantidad de hilos solicitada\n");
+                MPI_Abort(MPI_COMM_WORLD, SALIDA_ERROR);
+            }
+        }
         unsigned char *trabajo = trabajos != NULL ? trabajos[id_hilo] : NULL;
         uint64_t indice_global = (uint64_t)busqueda.id_proceso * (uint64_t)hilos + (uint64_t)id_hilo;
         uint64_t iteraciones_hilo = 0;
 
-        for (uint64_t llave = indice_global; llave < busqueda.total_llaves && !detener;
+        for (uint64_t llave = indice_global;
+             llave < busqueda.total_llaves && !atomic_load_explicit(&detener, memory_order_relaxed);
              llave += trabajadores) {
             iteraciones_hilo++;
             if (des_probar_llave(llave, busqueda.cifrado, busqueda.longitud, busqueda.frase,
@@ -128,27 +149,38 @@ int main(int argc, char **argv)
                         llave_hallada = llave;
                     }
                 }
-                detener = 1;
+                atomic_store_explicit(&detener, 1, memory_order_relaxed);
                 break;
             }
             /* Solo el hilo principal consulta el aviso de MPI (modo FUNNELED). */
             if (id_hilo == 0 && iteraciones_hilo % INTERVALO_REVISION == 0 && aviso_llego(&aviso)) {
-                detener = 1;
+                atomic_store_explicit(&detener, 1, memory_order_relaxed);
                 break;
             }
         }
-        iteraciones_totales += iteraciones_hilo;
+        cuentas[id_hilo] = iteraciones_hilo;
+        /* Punto de encuentro elegido antes de que el hilo principal lea
+         * los contadores. El cierre de la región une los hilos por contrato
+         * de OpenMP y no puede llevar nowait. */
+        #pragma omp barrier
+        #pragma omp master
+        {
+            for (int hilo = 0; hilo < hilos; hilo++) {
+                iteraciones_totales += cuentas[hilo];
+            }
+        }
     }
 
     local.encontrada = encontrada;
     local.llave = llave_hallada;
     local.iteraciones = iteraciones_totales;
     if (encontrada) {
-        aviso_enviar(&busqueda, llave_hallada);
+        aviso_enviar(&busqueda, &aviso, llave_hallada);
     }
     local.segundos = MPI_Wtime() - inicio;
 
     liberar_trabajos(trabajos, hilos);
+    free(cuentas);
     mpi_cerrar_busqueda(&busqueda, &aviso, &local);
     return SALIDA_MPI;
 }

@@ -77,6 +77,11 @@ int mpi_preparar_busqueda(int *argc, char ***argv, const char *uso, int argument
      * cumplen, así que todos comparten esta inicialización. */
     int nivel_hilos = 0;
     MPI_Init_thread(argc, argv, MPI_THREAD_FUNNELED, &nivel_hilos);
+    if (nivel_hilos < MPI_THREAD_FUNNELED) {
+        fprintf(stderr, "Error: MPI no ofrece el nivel MPI_THREAD_FUNNELED\n");
+        MPI_Abort(MPI_COMM_WORLD, SALIDA_ERROR);
+        return 0;
+    }
     MPI_Comm_rank(MPI_COMM_WORLD, &id_proceso);
     MPI_Comm_size(MPI_COMM_WORLD, &num_procesos);
     memset(busqueda, 0, sizeof *busqueda);
@@ -143,6 +148,9 @@ void mpi_imprimir_datos(const Busqueda *busqueda, const char *programa)
 
 void aviso_abrir(Aviso *aviso)
 {
+    aviso->envios = NULL;
+    aviso->cantidad_envios = 0;
+    aviso->llave_enviada = 0;
     aviso->llave_recibida = 0;
     MPI_Irecv(&aviso->llave_recibida, 1, MPI_UINT64_T, MPI_ANY_SOURCE, ETIQUETA_LLAVE,
               MPI_COMM_WORLD, &aviso->solicitud);
@@ -156,11 +164,22 @@ int aviso_llego(Aviso *aviso)
     return llego;
 }
 
-void aviso_enviar(const Busqueda *busqueda, uint64_t llave)
+void aviso_enviar(const Busqueda *busqueda, Aviso *aviso, uint64_t llave)
 {
+    int cantidad = busqueda->num_procesos - 1;
+    aviso->llave_enviada = llave;
+    if (cantidad > 0) {
+        aviso->envios = malloc((size_t)cantidad * sizeof *aviso->envios);
+        if (aviso->envios == NULL) {
+            fprintf(stderr, "Error: no hay memoria para enviar los avisos\n");
+            MPI_Abort(MPI_COMM_WORLD, SALIDA_ERROR);
+            return;
+        }
+    }
     for (int destino = 0; destino < busqueda->num_procesos; destino++) {
         if (destino != busqueda->id_proceso) {
-            MPI_Send(&llave, 1, MPI_UINT64_T, destino, ETIQUETA_LLAVE, MPI_COMM_WORLD);
+            MPI_Isend(&aviso->llave_enviada, 1, MPI_UINT64_T, destino, ETIQUETA_LLAVE,
+                      MPI_COMM_WORLD, &aviso->envios[aviso->cantidad_envios++]);
         }
     }
 }
@@ -179,6 +198,12 @@ void mpi_cerrar_busqueda(Busqueda *busqueda, Aviso *aviso, const ResultadoLocal 
     int hallazgos = 0;
     MPI_Allreduce(&local->encontrada, &hallazgos, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     aviso_cerrar(aviso, hallazgos - local->encontrada);
+    /* Primero se reciben todos los avisos. Luego se cierran los envíos,
+     * sin depender del almacenamiento temporal de mensajes de MPI. */
+    if (aviso->cantidad_envios > 0) {
+        MPI_Waitall(aviso->cantidad_envios, aviso->envios, MPI_STATUSES_IGNORE);
+    }
+    free(aviso->envios);
 
     /* Si hubo más de un hallazgo se reporta la menor llave. */
     uint64_t llave_local = local->encontrada ? local->llave : UINT64_MAX;

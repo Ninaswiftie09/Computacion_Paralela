@@ -134,7 +134,7 @@ int main(int argc, char **argv)
                              busqueda.trabajo)) {
             local.encontrada = 1;
             local.llave = candidata;
-            aviso_enviar(&busqueda, candidata);
+            aviso_enviar(&busqueda, &aviso, candidata);
             break;
         }
         if (local.iteraciones % INTERVALO_REVISION == 0 && aviso_llego(&aviso)) {

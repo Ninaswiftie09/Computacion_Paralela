@@ -8,7 +8,7 @@
  *      probando llaves sin bloquearse.
  *   2. Cada INTERVALO_REVISION llaves consulta con MPI_Test si ya llegó
  *      un aviso. Si llegó, deja de buscar.
- *   3. El proceso que encuentra la llave la envía con MPI_Send a los demás.
+ *   3. El proceso que encuentra la llave la envía con MPI_Isend a los demás.
  *   4. Al terminar, MPI_Allreduce cuenta cuántos procesos encontraron llave.
  *   5. Los procesos que esperan un aviso cierran su recepción con MPI_Wait.
  *      Los que no esperan ninguno la retiran con MPI_Cancel.
@@ -35,6 +35,9 @@
 
 /* Recepción pendiente del aviso de llave encontrada. */
 typedef struct {
+    MPI_Request *envios;     /* envíos pendientes hasta cerrar la búsqueda */
+    int cantidad_envios;
+    uint64_t llave_enviada;
     MPI_Request solicitud;   /* recepción abierta con MPI_Irecv */
     uint64_t llave_recibida; /* llave que anunció otro proceso */
 } Aviso;
@@ -91,13 +94,13 @@ void aviso_abrir(Aviso *aviso);
 int aviso_llego(Aviso *aviso);
 
 /*
- * Envía la llave encontrada a los demás procesos (MPI_Send).
+ * Envía la llave encontrada a los demás procesos (MPI_Isend).
  *
  * Entradas:
  *   busqueda  búsqueda en curso
  *   llave     llave que encontró este proceso
  */
-void aviso_enviar(const Busqueda *busqueda, uint64_t llave);
+void aviso_enviar(const Busqueda *busqueda, Aviso *aviso, uint64_t llave);
 
 /*
  * Alinea el arranque de todos los procesos y lee el reloj de MPI.
