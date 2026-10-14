@@ -60,7 +60,9 @@ Con un proceso, el dinámico usa búsqueda secuencial. Con varios, el proceso 0 
 ```bash
 bash scripts/evidencias.sh
 bash scripts/bitacora.sh 22 5 > resultados/bitacora.csv
+python3 scripts/validar_bitacora.py
 python3 scripts/graficas.py
+python3 scripts/catalogo.py
 ```
 
 El primer script recompila, registra el entorno, prueba entradas y recuperación de llaves, ejecuta B.1/B.2 y contrasta el cifrado con OpenSSL. B.2 usa cuatro procesos y registra un límite de 20 segundos para el caso que no termina.

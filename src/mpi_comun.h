@@ -98,6 +98,7 @@ int aviso_llego(Aviso *aviso);
  *
  * Entradas:
  *   busqueda  búsqueda en curso
+ *   aviso     conserva el dato y las solicitudes de envío hasta el cierre
  *   llave     llave que encontró este proceso
  */
 void aviso_enviar(const Busqueda *busqueda, Aviso *aviso, uint64_t llave);

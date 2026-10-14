@@ -15,6 +15,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+plt.rcParams.update({"font.size": 12, "axes.titlesize": 13, "legend.fontsize": 11})
 import numpy as np
 import pandas as pd
 
@@ -88,9 +89,8 @@ def grafica_speedup_procesos(res):
     menos de 1 en otras, así que su comportamiento va en la figura aparte."""
     difs = [d for d in ORDEN_DIF if d in res["dificultad"].unique()]
     procs = sorted(res["procesos"].unique())
-    fig, ejes = plt.subplots(1, len(difs), figsize=(3.4 * len(difs), 4), sharey=True)
-    if len(difs) == 1:
-        ejes = [ejes]
+    fig, matriz = plt.subplots(3, 2, figsize=(8.5, 9), sharey=True)
+    ejes = matriz.ravel()
     for eje, dif in zip(ejes, difs):
         for programa in ("ciclico", "permutado", "dinamico"):
             sub = res[(res["dificultad"] == dif) & (res["programa"] == programa)]
@@ -103,8 +103,12 @@ def grafica_speedup_procesos(res):
         eje.set_xlabel("Procesos")
         eje.set_xticks(procs)
         eje.grid(True, alpha=0.3)
-    ejes[0].set_ylabel("Speedup contra secuencial")
-    ejes[-1].legend()
+    for eje in ejes[:len(difs)]:
+        eje.set_ylabel("Speedup")
+    for eje in ejes[len(difs):]:
+        eje.axis("off")
+    handles, labels = ejes[0].get_legend_handles_labels()
+    ejes[-1].legend(handles, labels, loc="center")
     fig.suptitle("Speedup por número de procesos")
     fig.tight_layout()
     fig.savefig(DIR_IMG / "speedup_procesos.png", dpi=130)
@@ -228,9 +232,11 @@ def tablas_latex(res):
     for dif in ORDEN_DIF:
         sub = res[(res.dificultad == dif) & (res.hilos == 1) &
                   ((res.procesos == 4) | (res.programa == "secuencial"))]
-        for _, f in sub.sort_values("programa").iterrows():
+        for i, (_, f) in enumerate(sub.sort_values("programa").iterrows()):
             filas.append(f"{ETIQUETA_DIF[dif]} & {nombres[f.programa]} & {f.segundos_media:.4f} & "
                          f"{f.segundos_desv:.4f} & {f.speedup:.2f}" + r" \\")
+            if i < len(sub) - 1:
+                filas[-1] += "*"
     (destino / "comparacion.tex").write_text("\n".join(filas) + "\n", encoding="utf-8")
     filas = []
     for _, f in res[(res.programa == "hibrido") & (res.dificultad == "media")].sort_values(["procesos", "hilos"]).iterrows():

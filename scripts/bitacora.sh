@@ -1,23 +1,28 @@
 #!/bin/bash
-# BitÃƒÂ¡cora de tiempos. Escala el espacio a 2^N y mide cada programa con
-# llaves de distinta dificultad y distinto nÃƒÂºmero de procesos. Repite cada
+# Bitácora de tiempos. Escala el espacio a 2^N y mide cada programa con
+# llaves de distinta dificultad y distinto número de procesos. Repite cada
 # caso varias veces y escribe una fila por corrida en formato CSV.
 #
 # Uso: scripts/bitacora.sh [N] [repeticiones] > resultados/bitacora.csv
-#   N             bits del espacio de llaves. Por omisiÃƒÂ³n, 24.
-#   repeticiones  corridas por caso. Por omisiÃƒÂ³n, 5.
+#   N             bits del espacio de llaves. Por omisión, 22.
+#   repeticiones  corridas por caso. Por omisión, 5.
 #
-# Las llaves siguen las definiciones de la guÃƒÂ­a, escaladas a S = 2^N:
+# Las llaves siguen las definiciones de la guía, escaladas a S = 2^N:
 #   facil        S/2 + 1
 #   media        S/2 + S/8
 #   dificil      techo(S/7 + S/13)
 #   naive_mejor  S/4 + 1   (primera del segundo proceso con 4 procesos)
-#   naive_peor   S/4 - 1   (ÃƒÂºltima del primer proceso con 4 procesos)
+#   naive_peor   S/4 - 1   (última del primer proceso con 4 procesos)
 set -euo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 N=${1:-22}
 REPETICIONES=${2:-5}
+if ! [[ "$N" =~ ^[0-9]+$ && "$REPETICIONES" =~ ^[0-9]+$ ]] ||
+   (( N < 4 || N > 56 || REPETICIONES < 1 )); then
+    echo 'Uso: bitacora.sh [bits entre 4 y 56] [repeticiones positivas]' >&2
+    exit 1
+fi
 FRASE="es una prueba de"
 TEXTO=textos/prueba.txt
 PROCESOS="1 2 4 8"
@@ -52,7 +57,7 @@ S=$(python3 -c "print(2**$N)")
 declare -A LLAVE
 LLAVE[facil]=$(python3 -c "print($S//2 + 1)")
 LLAVE[media]=$(python3 -c "print($S//2 + $S//8)")
-LLAVE[dificil]=$(python3 -c "import math; print(math.ceil($S/7 + $S/13))")
+LLAVE[dificil]=$(python3 -c "print(($S * 20 + 90) // 91)")
 LLAVE[naive_mejor]=$(python3 -c "print($S//4 + 1)")
 LLAVE[naive_peor]=$(python3 -c "print($S//4 - 1)")
 DIFICULTADES="facil media dificil naive_mejor naive_peor"
@@ -92,7 +97,7 @@ for dificultad in $DIFICULTADES; do
             done
         done
 
-        # El permutado es determinista por semilla. Cada repeticiÃƒÂ³n usa una
+        # El permutado es determinista por semilla. Cada repetición usa una
         # semilla distinta para medir el tiempo esperado, no el de un orden fijo.
         for np in $PROCESOS; do
             salida=$(ejecutar "permutado_${dificultad}_${np}_${rep}" "$k" mpirun --use-hwthread-cpus --bind-to none -np "$np" ./bin/permutado "$cifrado" "$FRASE" "$N" "$rep")
