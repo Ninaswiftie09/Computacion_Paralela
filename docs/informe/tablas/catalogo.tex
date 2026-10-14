@@ -1,0 +1,86 @@
+main (ciclico.c) & int argc, char **argv & Retorno: int. Procesa los argumentos, ejecuta la operación del programa y devuelve su código de salida. \\
+\addlinespace[2pt]
+cifrar\_\allowbreak{}archivo (cifrador.c) & const char *ruta\_\allowbreak{}texto, const char *ruta\_\allowbreak{}salida, uint64\_\allowbreak{}t llave & Retorno: int. Carga el texto, lo cifra y escribe el archivo de salida. Devuelve el código de éxito o error. \\
+\addlinespace[2pt]
+descifrar\_\allowbreak{}archivo (cifrador.c) & const char *ruta\_\allowbreak{}cifrado, uint64\_\allowbreak{}t llave & Retorno: int. Carga el cifrado y muestra su descifrado. Devuelve el código de éxito o error. \\
+\addlinespace[2pt]
+main (cifrador.c) & int argc, char **argv & Retorno: int. Procesa los argumentos, ejecuta la operación del programa y devuelve su código de salida. \\
+\addlinespace[2pt]
+es\_\allowbreak{}numero\_\allowbreak{}sin\_\allowbreak{}signo (comun.c) & const char *texto & Retorno: int. Indica si la cadena contiene solo dígitos y no está vacía. \\
+\addlinespace[2pt]
+validar\_\allowbreak{}frase (comun.c) & const char *frase, size\_\allowbreak{}t longitud\_\allowbreak{}cifrado & Retorno: int. Comprueba que la frase no esté vacía ni sea mayor que el cifrado. Advierte si es corta. \\
+\addlinespace[2pt]
+leer\_\allowbreak{}llave (comun.c) & const char *texto, uint64\_\allowbreak{}t *llave & Retorno: int. Escribe la llave validada en el puntero de salida. Devuelve 1 si está entre 0 y 2 elevado a 56 menos 1. \\
+\addlinespace[2pt]
+leer\_\allowbreak{}bits (comun.c) & const char *texto, int *bits & Retorno: int. Escribe en bits un valor entre 1 y 56. Devuelve 1 si es válido. \\
+\addlinespace[2pt]
+leer\_\allowbreak{}archivo (comun.c) & const char *ruta, size\_\allowbreak{}t *longitud & Retorno: unsigned char *. Devuelve memoria reservada con el archivo y escribe su longitud. Devuelve NULL si falla. El llamador libera el arreglo. \\
+\addlinespace[2pt]
+busqueda\_\allowbreak{}preparar (comun.c) & const char *ruta\_\allowbreak{}cifrado, const char *frase, const char *texto\_\allowbreak{}bits, Busqueda *busqueda & Retorno: int. Valida las entradas y completa la estructura de búsqueda. Devuelve 1 si queda lista o 0 si falla. \\
+\addlinespace[2pt]
+busqueda\_\allowbreak{}liberar (comun.c) & Busqueda *busqueda & Retorno: void. Libera los arreglos de la búsqueda y deja sus punteros en NULL. \\
+\addlinespace[2pt]
+imprimir\_\allowbreak{}datos\_\allowbreak{}busqueda (comun.c) & const Busqueda *busqueda, const char *programa & Retorno: void. Muestra programa, archivo, frase, procesos y espacio de búsqueda. \\
+\addlinespace[2pt]
+imprimir\_\allowbreak{}llave (comun.c) & const Busqueda *busqueda, int encontrada, uint64\_\allowbreak{}t llave & Retorno: void. Muestra la llave y el texto descifrado, o informa que no se encontró. \\
+\addlinespace[2pt]
+imprimir\_\allowbreak{}tiempo (comun.c) & double segundos, uint64\_\allowbreak{}t iteraciones & Retorno: void. Muestra segundos y velocidad calculada con la cantidad total de intentos. \\
+\addlinespace[2pt]
+imprimir\_\allowbreak{}texto (comun.c) & const unsigned char *texto & Retorno: void. Muestra la cadena y sustituye caracteres de control para conservar la salida de terminal. \\
+\addlinespace[2pt]
+imprimir\_\allowbreak{}hexadecimal (comun.c) & const unsigned char *datos, size\_\allowbreak{}t longitud & Retorno: void. Muestra los bytes en formato hexadecimal. \\
+\addlinespace[2pt]
+segundos\_\allowbreak{}ahora (comun.c) & void & Retorno: double. Devuelve el tiempo de un reloj monótono en segundos. \\
+\addlinespace[2pt]
+expandir\_\allowbreak{}llave (des.c) & uint64\_\allowbreak{}t llave, DES\_\allowbreak{}cblock *llave\_\allowbreak{}des & Retorno: void. Escribe en llave\_\allowbreak{}des los ocho bytes de llave DES con paridad impar. \\
+\addlinespace[2pt]
+transformar (des.c) & uint64\_\allowbreak{}t llave, unsigned char *datos, size\_\allowbreak{}t longitud, int operacion & Retorno: void. Modifica los datos con DES ECB según la operación de cifrado o descifrado. La longitud debe ser múltiplo de ocho. \\
+\addlinespace[2pt]
+des\_\allowbreak{}longitud\_\allowbreak{}rellena (des.c) & size\_\allowbreak{}t longitud & Retorno: size\_\allowbreak{}t. Devuelve la longitud redondeada al siguiente múltiplo de ocho. \\
+\addlinespace[2pt]
+des\_\allowbreak{}cifrar (des.c) & uint64\_\allowbreak{}t llave, unsigned char *datos, size\_\allowbreak{}t longitud & Retorno: void. Sobrescribe los datos con su cifrado DES ECB. \\
+\addlinespace[2pt]
+des\_\allowbreak{}descifrar (des.c) & uint64\_\allowbreak{}t llave, unsigned char *datos, size\_\allowbreak{}t longitud & Retorno: void. Sobrescribe los datos con su descifrado DES ECB. \\
+\addlinespace[2pt]
+des\_\allowbreak{}probar\_\allowbreak{}llave (des.c) & uint64\_\allowbreak{}t llave, const unsigned char *cifrado, size\_\allowbreak{}t longitud, const char *frase, unsigned char *trabajo & Retorno: int. Escribe el descifrado en trabajo. Devuelve 1 cuando contiene la frase, o 0 en otro caso. Requiere longitud más uno bytes de trabajo. \\
+\addlinespace[2pt]
+coordinar (dinamico.c) & const Busqueda *busqueda, uint64\_\allowbreak{}t bloque & Retorno: void. Responde pedidos y reparte rangos sin repetir. Retira a todos los trabajadores al agotarse el espacio o recibir un hallazgo. \\
+\addlinespace[2pt]
+trabajar (dinamico.c) & Busqueda *busqueda, ResultadoLocal *local & Retorno: void. Solicita y recorre bloques. Actualiza en local el hallazgo, su llave y el número de intentos. \\
+\addlinespace[2pt]
+main (dinamico.c) & int argc, char **argv & Retorno: int. Procesa los argumentos, ejecuta la operación del programa y devuelve su código de salida. \\
+\addlinespace[2pt]
+reservar\_\allowbreak{}trabajos (hibrido.c) & int hilos, size\_\allowbreak{}t bytes\_\allowbreak{}trabajo & Retorno: unsigned char **. Devuelve un arreglo de buffers, uno por hilo. Devuelve NULL si falla y libera las reservas parciales. \\
+\addlinespace[2pt]
+liberar\_\allowbreak{}trabajos (hibrido.c) & unsigned char **trabajos, int hilos & Retorno: void. Libera los buffers y el arreglo de punteros de los hilos. \\
+\addlinespace[2pt]
+main (hibrido.c) & int argc, char **argv & Retorno: int. Procesa los argumentos, ejecuta la operación del programa y devuelve su código de salida. \\
+\addlinespace[2pt]
+reservar\_\allowbreak{}memoria (mpi\_\allowbreak{}comun.c) & Busqueda *busqueda, size\_\allowbreak{}t bytes\_\allowbreak{}frase & Retorno: int. Reserva cifrado, trabajo y frase para un proceso. Devuelve 1 si todas las reservas tienen éxito. \\
+\addlinespace[2pt]
+aviso\_\allowbreak{}cerrar (mpi\_\allowbreak{}comun.c) & Aviso *aviso, int avisos\_\allowbreak{}esperados & Retorno: void. Completa o cancela la recepción y recibe los avisos restantes según los hallazgos acordados. \\
+\addlinespace[2pt]
+mpi\_\allowbreak{}preparar\_\allowbreak{}busqueda (mpi\_\allowbreak{}comun.c) & int *argc, char ***argv, const char *uso, int argumentos\_\allowbreak{}extra, Busqueda *busqueda & Retorno: int. Inicia MPI, verifica soporte de hilos y reparte entradas. Completa busqueda y puede modificar argc y argv. Devuelve 1 si se puede buscar. \\
+\addlinespace[2pt]
+mpi\_\allowbreak{}imprimir\_\allowbreak{}datos (mpi\_\allowbreak{}comun.c) & const Busqueda *busqueda, const char *programa & Retorno: void. Muestra los datos de búsqueda solo desde el proceso 0. \\
+\addlinespace[2pt]
+aviso\_\allowbreak{}abrir (mpi\_\allowbreak{}comun.c) & Aviso *aviso & Retorno: void. Inicializa aviso y abre una recepción no bloqueante de la llave. \\
+\addlinespace[2pt]
+aviso\_\allowbreak{}llego (mpi\_\allowbreak{}comun.c) & Aviso *aviso & Retorno: int. Actualiza la solicitud de aviso. Devuelve 1 si se completó la recepción. \\
+\addlinespace[2pt]
+aviso\_\allowbreak{}enviar (mpi\_\allowbreak{}comun.c) & const Busqueda *busqueda, Aviso *aviso, uint64\_\allowbreak{}t llave & Retorno: void. Guarda la llave en aviso e inicia los envíos no bloqueantes a los demás procesos. Conserva solicitudes hasta el cierre. \\
+\addlinespace[2pt]
+mpi\_\allowbreak{}iniciar\_\allowbreak{}cronometro (mpi\_\allowbreak{}comun.c) & void & Retorno: double. Ejecuta una barrera MPI explícita y devuelve el instante de inicio. \\
+\addlinespace[2pt]
+mpi\_\allowbreak{}cerrar\_\allowbreak{}busqueda (mpi\_\allowbreak{}comun.c) & Busqueda *busqueda, Aviso *aviso, const ResultadoLocal *local & Retorno: void. Completa mensajes, reúne llave y métricas, imprime resultados, libera memoria y finaliza MPI. \\
+\addlinespace[2pt]
+main (naive.c) & int argc, char **argv & Retorno: int. Procesa los argumentos, ejecuta la operación del programa y devuelve su código de salida. \\
+\addlinespace[2pt]
+mezclar (permutado.c) & uint64\_\allowbreak{}t valor & Retorno: uint64\_\allowbreak{}t. Devuelve un entero con los bits mezclados para obtener los parámetros de la permutación. \\
+\addlinespace[2pt]
+leer\_\allowbreak{}semilla (permutado.c) & const char *texto, uint64\_\allowbreak{}t *semilla & Retorno: int. Escribe una semilla sin signo de 64 bits. Devuelve 1 si es válida o 0 si falla. \\
+\addlinespace[2pt]
+main (permutado.c) & int argc, char **argv & Retorno: int. Procesa los argumentos, ejecuta la operación del programa y devuelve su código de salida. \\
+\addlinespace[2pt]
+main (secuencial.c) & int argc, char **argv & Retorno: int. Procesa los argumentos, ejecuta la operación del programa y devuelve su código de salida. \\
+\addlinespace[2pt]

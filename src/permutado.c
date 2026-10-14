@@ -15,9 +15,8 @@
  * son disjuntos y juntos cubren todo el espacio.
  *
  * La posición de una llave dentro del recorrido deja de coincidir con su
- * valor, así que el número esperado de iteraciones hasta encontrarla es
- * cercano a 2^bits / (2P) para cualquier llave. A y C se derivan de una
- * semilla, que se puede repetir para reproducir el mismo recorrido.
+ * valor. Al variar la semilla se busca reducir esa dependencia. A y C se
+ * derivan de una semilla que permite reproducir el mismo recorrido.
  *
  * Uso: mpirun -np <procesos> permutado <cifrado.bin> "<frase>" [bits] [semilla]
  *   bits     se prueban las llaves menores que 2^bits. Por omisión, 56.

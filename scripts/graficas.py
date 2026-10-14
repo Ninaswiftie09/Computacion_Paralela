@@ -117,7 +117,7 @@ def grafica_speedup_procesos(res):
 
 def grafica_consistencia(res):
     """Speedup de cada acercamiento con 4 procesos, por dificultad.
-    Muestra que el naive es irregular y el cíclico y el permutado son estables."""
+    Permite comparar la sensibilidad a la llave y al orden de recorrido."""
     difs = [d for d in ORDEN_DIF if d in res["dificultad"].unique()]
     programas = ("naive", "ciclico", "permutado", "dinamico")
     x = np.arange(len(difs))
@@ -144,8 +144,7 @@ def grafica_consistencia(res):
 
 
 def grafica_iteraciones(res):
-    """Iteraciones del proceso ganador con 4 procesos. El naive depende de la
-    posición de la llave, el permutado no."""
+    """Iteraciones del proceso ganador con 4 procesos para cada recorrido."""
     difs = [d for d in ORDEN_DIF if d in res["dificultad"].unique()]
     programas = ("naive", "ciclico", "permutado", "dinamico")
     x = np.arange(len(difs))
