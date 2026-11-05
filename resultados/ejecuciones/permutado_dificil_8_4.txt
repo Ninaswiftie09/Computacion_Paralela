@@ -1,14 +1,14 @@
-$ mpirun --use-hwthread-cpus --bind-to none -np 8 ./bin/permutado /tmp/tmp.kHu23kblmk/dificil.bin es\ una\ prueba\ de 22 4 
+$ mpirun --use-hwthread-cpus --bind-to none -np 8 ./bin/permutado /tmp/tmp.VgwnjNL8dl/dificil.bin es\ una\ prueba\ de 24 4
 Programa: permutado
 Procesos: 8
-Archivo cifrado: /tmp/tmp.kHu23kblmk/dificil.bin
+Archivo cifrado: /tmp/tmp.VgwnjNL8dl/dificil.bin
 Frase clave: "es una prueba de"
-Espacio de llaves: 2^22 (4194304 llaves)
+Espacio de llaves: 2^24 (16777216 llaves)
 Semilla: 4
-Llave encontrada: 921826
+Llave encontrada: 16700000
 Texto descifrado: Esta es una prueba de proyecto 2
-Proceso que la encontró: 5
-Iteraciones por proceso: 28672 30720 30720 30720 30720 30168 30720 30720
-Iteraciones del proceso ganador: 30168
-Tiempo: 0.020303 s
-Velocidad: 11.98 millones de llaves por segundo
+Proceso que la encontró: 7
+Iteraciones por proceso: 92160 78848 90112 113664 107520 112640 88064 116143
+Iteraciones del proceso ganador: 116143
+Tiempo: 0.089453 s
+Velocidad: 8.93 millones de llaves por segundo

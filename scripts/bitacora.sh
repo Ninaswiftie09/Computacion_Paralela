@@ -1,33 +1,27 @@
 #!/bin/bash
-# Bitácora de tiempos. Escala el espacio a 2^N y mide cada programa con
-# llaves de distinta dificultad y distinto número de procesos. Repite cada
-# caso varias veces y escribe una fila por corrida en formato CSV.
+# Bitácora de tiempos con una misma llave y distintas configuraciones.
 #
-# Uso: scripts/bitacora.sh [N] [repeticiones] > resultados/bitacora.csv
-#   N             bits del espacio de llaves. Por omisión, 22.
+# Uso: scripts/bitacora.sh [N] [repeticiones] [llave] > resultados/bitacora.csv
+#   N             bits del espacio de llaves. Por omisión, 24.
 #   repeticiones  corridas por caso. Por omisión, 5.
 #
-# Las llaves siguen las definiciones de la guía, escaladas a S = 2^N:
-#   facil        S/2 + 1
-#   media        S/2 + S/8
-#   dificil      techo(S/7 + S/13)
-#   naive_mejor  S/4 + 1   (primera del segundo proceso con 4 procesos)
-#   naive_peor   S/4 - 1   (última del primer proceso con 4 procesos)
+#   llave         valor usado para cifrar. Por omisión, 16700000.
 set -euo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
-N=${1:-22}
+N=${1:-24}
 REPETICIONES=${2:-5}
-if ! [[ "$N" =~ ^[0-9]+$ && "$REPETICIONES" =~ ^[0-9]+$ ]] ||
-   (( N < 4 || N > 56 || REPETICIONES < 1 )); then
-    echo 'Uso: bitacora.sh [bits entre 4 y 56] [repeticiones positivas]' >&2
+LLAVE_EVALUACION=${3:-16700000}
+if ! [[ "$N" =~ ^[0-9]+$ && "$REPETICIONES" =~ ^[0-9]+$ && "$LLAVE_EVALUACION" =~ ^[0-9]+$ ]] ||
+   (( N < 4 || N > 56 || REPETICIONES < 1 || LLAVE_EVALUACION >= (1 << N) )); then
+    echo 'Uso: bitacora.sh [bits entre 4 y 56] [repeticiones positivas] [llave menor que 2^bits]' >&2
     exit 1
 fi
 FRASE="es una prueba de"
 TEXTO=textos/prueba.txt
 PROCESOS="1 2 4 8"
 HIBRIDO_CONFIGS="1:2 1:4 1:8 2:4 4:2"
-LIMITE=180
+LIMITE=900
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 LOGDIR=${BITACORA_LOGDIR:-resultados/ejecuciones}
@@ -37,8 +31,8 @@ ejecutar() {
     local nombre=$1 esperada=$2
     shift 2
     local registro="$LOGDIR/$nombre.txt" salida
-    printf '$ ' > "$registro"
-    printf '%q ' "$@" >> "$registro"
+    printf '$' > "$registro"
+    printf ' %q' "$@" >> "$registro"
     printf '\n' >> "$registro"
     if ! salida=$(timeout -k 2 "$LIMITE" "$@" 2>&1); then
         printf '%s\n' "$salida" >> "$registro"
@@ -50,17 +44,13 @@ ejecutar() {
         echo "Error: llave inesperada en $nombre" >&2
         exit 1
     fi
+    echo "Completada: $nombre" >&2
     printf '%s\n' "$salida"
 }
 
-S=$(python3 -c "print(2**$N)")
 declare -A LLAVE
-LLAVE[facil]=$(python3 -c "print($S//2 + 1)")
-LLAVE[media]=$(python3 -c "print($S//2 + $S//8)")
-LLAVE[dificil]=$(python3 -c "print(($S * 20 + 90) // 91)")
-LLAVE[naive_mejor]=$(python3 -c "print($S//4 + 1)")
-LLAVE[naive_peor]=$(python3 -c "print($S//4 - 1)")
-DIFICULTADES="facil media dificil naive_mejor naive_peor"
+LLAVE[dificil]=$LLAVE_EVALUACION
+DIFICULTADES="dificil"
 
 # Extrae "Tiempo" y las iteraciones del ganador de la salida de un programa,
 # y escribe una fila del CSV.
@@ -87,6 +77,7 @@ for dificultad in $DIFICULTADES; do
     cifrado="$TMP/$dificultad.bin"
     ./bin/cifrador cifrar "$TEXTO" "$cifrado" "$k" > /dev/null
     for rep in $(seq 1 "$REPETICIONES"); do
+        echo "Repetición $rep de $REPETICIONES, llave $k, espacio de $N bits" >&2
         salida=$(ejecutar "secuencial_${dificultad}_${rep}" "$k" ./bin/secuencial "$cifrado" "$FRASE" "$N")
         fila secuencial "$dificultad" "$k" 1 1 "$rep" "$salida"
 

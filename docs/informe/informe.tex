@@ -43,7 +43,7 @@ Roberto Barreda, 23354\par
 Nina Najera, 231088\par
 José Antón, 221041\par
 \vspace{1cm}
-Guatemala, 13 de octubre de 2026\par
+Guatemala, 14 de octubre de 2026\par
 \end{titlepage}
 \hypersetup{pageanchor=true}
 \pagenumbering{roman}
@@ -54,7 +54,7 @@ Guatemala, 13 de octubre de 2026\par
 \section{Introducción}
 Se desarrolló un programa en C que recupera una llave DES por fuerza bruta. Para reconocer una posible solución, se descifra el archivo con cada llave y se busca una frase conocida dentro del resultado. Se implementaron una versión secuencial, una versión MPI con rangos contiguos y tres alternativas de reparto: cíclica, permutada y por bloques dinámicos. También se incluyó una versión híbrida con MPI y OpenMP.
 
-Se compararon los tiempos con distintas llaves y cantidades de procesos. El análisis distingue entre una mejora por repartir el trabajo y una búsqueda que termina pronto por la posición favorable de la llave. Se registraron los comandos, las salidas y las mediciones para comprobar los resultados.
+Se compararon los tiempos con la llave 16700000 y distintas cantidades de procesos e hilos. El análisis considera el reparto de trabajo, la posición de la llave y el costo de comunicación. Cada configuración se ejecutó cinco veces y se comprobó la llave recuperada.
 
 El código y los archivos del proyecto se encuentran en el repositorio:
 \url{https://github.com/Ninaswiftie09/Computacion_Paralela/tree/Proyecto2}.
@@ -153,7 +153,7 @@ Se utilizó el texto ``Esta es una prueba de proyecto 2'' y la frase ``es una pr
 
 Las pruebas con cuatro procesos sobre el espacio completo usan las llaves 123456, $2^{54}-1$ y $2^{54}$. La última llave es la primera del rango del proceso 1 y se encuentra en un intento. La llave $2^{54}-1$ queda al final del primer rango y no terminó durante el límite de 20 segundos. Se registra como un tiempo mayor de 20 segundos, sin tratar el corte como un tiempo de búsqueda completo.
 
-La división utiliza rangos que comienzan en cero. Por eso el cambio entre el último elemento del primer rango y el primero del siguiente ocurre exactamente entre $2^{54}-1$ y $2^{54}$. Las salidas de estas pruebas se conservan en resultados/guia.txt.
+La división utiliza rangos que comienzan en cero. Por eso el cambio entre el último elemento del primer rango y el primero del siguiente ocurre exactamente entre $2^{54}-1$ y $2^{54}$.
 
 \subsection{Distintos tamaños del espacio secuencial}
 Se midió la búsqueda de la última llave de espacios de 16, 20, 22 y 24 bits. Limitar el espacio no cambia DES, que sigue usando una llave efectiva de 56 bits. Solo permite terminar las mediciones en un tiempo razonable.
@@ -172,29 +172,25 @@ Bits & Llave & Intentos & Tiempo en segundos \\
 
 \section{Evaluación de tiempos y speedup}
 \subsection{Condiciones de medición}
-Las mediciones se realizaron en un contenedor Debian 13 sobre Docker Desktop y WSL2, con un Intel Core i7-1165G7, cuatro núcleos y ocho hilos lógicos. Se utilizó GCC 14.2.0 con O2, Open MPI 5.0.7 y OpenSSL 3.5.7. Los procesos no se fijaron a núcleos. Se habilitó el uso de hilos lógicos para las pruebas de ocho procesos. El registro completo está en resultados/entorno.txt.
+Las mediciones se realizaron en un contenedor Debian 13 sobre Docker Desktop y WSL2, con un Intel Core i7-1165G7, cuatro núcleos y ocho hilos lógicos. Se utilizó GCC 14.2.0 con O2, Open MPI 5.0.7 y OpenSSL 3.5.7. Los procesos no se fijaron a núcleos y se habilitó el uso de hilos lógicos para las pruebas de ocho procesos.
 
-Se usó un espacio de $S=2^{22}$ y se realizaron cinco repeticiones por caso. Se probaron 1, 2, 4 y 8 procesos para los buscadores MPI. El híbrido usó las combinaciones 1 por 2, 1 por 4, 1 por 8, 2 por 4 y 4 por 2 procesos por hilos. Las 550 corridas conservan sus salidas y una comprobación de la llave recuperada.
+Se usó un espacio de $S=2^{24}=16777216$ llaves y la llave 16700000. Se probaron 1, 2, 4 y 8 procesos para los buscadores MPI. El híbrido usó las combinaciones 1 por 2, 1 por 4, 1 por 8, 2 por 4 y 4 por 2 procesos por hilos. Se realizaron cinco repeticiones por configuración, para un total de 110 ejecuciones con verificación de la llave.
 
-Las llaves se definieron con las mismas posiciones relativas para todos los algoritmos. Las etiquetas fácil, media y difícil describen su relación con el reparto naive de cuatro procesos, no una dificultad propia de DES.
+Todos los algoritmos buscaron la misma llave y frase en el mismo archivo cifrado. El secuencial realiza 16700001 intentos para llegar a esa llave. El tamaño del espacio limita el recorrido, pero DES conserva sus 56 bits útiles.
 
 \begin{table}[htbp]
 \centering
-\caption{Llaves del espacio reducido.}
+\caption{Llave y espacio de búsqueda utilizados.}
 \begin{tabular}{lll}
 \toprule
 Caso & Definición & Llave \\
 \midrule
-Fácil & $S/2+1$ & 2097153 \\
-Media & $S/2+S/8$ & 2621440 \\
-Difícil & $\lceil S/7+S/13\rceil$ & 921826 \\
-Naive mejor & $S/4+1$ & 1048577 \\
-Naive peor & $S/4-1$ & 1048575 \\
+Evaluación & $0\leq k<2^{24}$ & 16700000 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Se calcula el speedup como $T_s/\overline{T_p}$, donde $T_s$ es el promedio secuencial de la misma llave y $\overline{T_p}$ es el promedio paralelo. La desviación estándar muestra la variación entre las cinco corridas. En el permutado incluye también el cambio de semilla. No se mezclan los datos de esta serie con mediciones anteriores.
+Se calcula el speedup como $T_s/\overline{T_p}$, donde $T_s$ es el promedio secuencial y $\overline{T_p}$ el promedio paralelo de la misma llave. La desviación estándar muestra la variación entre las cinco repeticiones. En permutado se usan las semillas 1 a 5, por lo que también incluye el cambio del orden de búsqueda.
 
 \subsection{Comparación con cuatro procesos}
 \begin{table}[p]
@@ -202,25 +198,23 @@ Se calcula el speedup como $T_s/\overline{T_p}$, donde $T_s$ es el promedio secu
 \caption{Tiempo medio, desviación estándar y speedup con cuatro procesos. Los tiempos están en segundos.}
 \begin{tabular}{llrrr}
 \toprule
-Caso & Programa & Media & Desviación & Speedup \\
+Llave & Programa & Media & Desviación & Speedup \\
 \midrule
 \filastabla{tablas/comparacion.tex}
 \bottomrule
 \end{tabular}
 \end{table}
 
-El naive puede obtener un speedup muy grande cuando la llave aparece al inicio de un rango. Ese valor describe una posición favorable y no una mejora que se mantenga para cualquier llave. En los casos cercanos al final de un rango, su ventaja disminuye y puede ser menor que uno.
+El secuencial obtuvo un promedio de 8.2229 segundos. Con cuatro procesos, naive tardó 2.9956 segundos, el cíclico 2.9418, el permutado 1.3514 y el dinámico 3.9032. Sus speedups fueron 2.75, 2.80, 6.08 y 2.11, respectivamente.
 
-Con cuatro procesos, el speedup del cíclico estuvo entre 2.99 y 3.41 en los cinco casos. El dinámico estuvo entre 1.78 y 2.74. El naive varió entre 0.73 y 1823.98. Estos valores muestran por qué se deben probar varias posiciones de llave.
+En naive, la llave pertenece al proceso 3 y está a 4117088 posiciones del inicio de su rango. El ganador realiza 4117089 intentos. En el cíclico realiza 4175001 intentos. Esta diferencia muestra que el speedup depende tanto del reparto como del trabajo necesario para llegar a la solución.
 
-El reparto cíclico conserva una relación más regular entre el trabajo secuencial y el paralelo. El dinámico evita asignaciones fijas durante toda la búsqueda, aunque pierde un proceso de cálculo al dedicarlo a coordinar. Con cuatro procesos dispone de tres trabajadores, lo que debe considerarse al interpretar la comparación.
-
-El permutado cambia qué llaves aparecen primero. Puede superar al recorrido creciente en una llave y tardar más en otra. Sus resultados se deben leer junto con la desviación estándar, sin afirmar que elimina toda variación.
+El dinámico dispone de tres trabajadores y un coordinador. Su tiempo incluye los pedidos y la entrega de bloques de 4096 llaves. En permutado, la desviación también refleja que las cinco semillas colocan la solución en posiciones distintas. Una llave alta no garantiza que el secuencial sea el más lento en todas las configuraciones.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{img/speedup_consistencia.png}
-\caption{Speedup con cuatro procesos según la posición de la llave. El eje vertical usa escala logarítmica.}
+\caption{Speedup con cuatro procesos para la llave 16700000. El eje vertical usa escala logarítmica.}
 \end{figure}
 \begin{figure}[htbp]
 \centering
@@ -229,18 +223,30 @@ El permutado cambia qué llaves aparecen primero. Puede superar al recorrido cre
 \end{figure}
 
 \subsection{Cambio en la cantidad de procesos}
+\begin{table}[p]
+\centering
+\small
+\caption{Resultados de las 22 configuraciones para la llave 16700000. Los tiempos están en segundos.}
+\begin{tabular}{lrrrrr}
+\toprule
+Programa & Procesos & Hilos & Media & Desviación & Speedup \\
+\midrule
+\filastabla{tablas/configuraciones.tex}
+\bottomrule
+\end{tabular}
+\end{table}
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{img/speedup_procesos.png}
 \caption{Speedup de las alternativas con distintas cantidades de procesos.}
 \end{figure}
 
-La línea ideal muestra una referencia proporcional a la cantidad de procesos. No considera el costo de los mensajes ni el proceso coordinador del dinámico. Los resultados pueden alejarse de esa línea por el reparto de trabajo, los recursos disponibles y la carga del equipo. Se necesitan más repeticiones y mediciones de afinidad para atribuir una diferencia a una causa concreta.
+La línea ideal representa un speedup proporcional a la cantidad de procesos. Los mensajes, el coordinador y los recursos compartidos pueden alejar los resultados de esa referencia. Con igual total de recursos lógicos se obtuvieron estos ganadores. Con 2 recursos lógicos ganó permutado (2 procesos y 1 hilo por proceso), con 2.2812 segundos y speedup 3.60. Con 4 recursos lógicos ganó permutado (4 procesos y 1 hilo por proceso), con 1.3514 segundos y speedup 6.08. Con 8 recursos lógicos ganó permutado (8 procesos y 1 hilo por proceso), con 1.3877 segundos y speedup 5.93. Las diferencias pequeñas se interpretan junto con la desviación estándar.
 
 \subsection{MPI con OpenMP}
 \begin{table}[htbp]
 \centering
-\caption{Versión híbrida para la llave media. Los tiempos están en segundos.}
+\caption{Versión híbrida para la llave 16700000. Los tiempos están en segundos.}
 \begin{tabular}{rrrrr}
 \toprule
 Procesos & Hilos & Media & Desviación & Speedup \\
@@ -255,20 +261,20 @@ Procesos & Hilos & Media & Desviación & Speedup \\
 \caption{Híbrido frente a MPI puro con igual cantidad total de trabajadores.}
 \end{figure}
 
-Para la llave media, MPI puro con ocho procesos obtuvo un tiempo de 0.2678 segundos y un speedup de 4.50. Las tres configuraciones híbridas con ocho trabajadores tuvieron tiempos entre 0.2845 y 0.2896 segundos. Por tanto, en este caso no se observó una mejora del híbrido frente a MPI puro.
+El cíclico con ocho procesos obtuvo 2.0909 segundos y speedup 3.93. Las tres configuraciones híbridas con ocho recursos lógicos registraron promedios entre 2.3936 y 2.5110 segundos. La más rápida usó 2 procesos y 4 hilos por proceso, con un tiempo mayor que el cíclico de ocho procesos.
 
-Una mejora frente al secuencial no demuestra por sí sola una ventaja de OpenMP frente a MPI. Para evaluar esa ventaja se compara el híbrido con el cíclico de igual cantidad total de trabajadores. El resultado depende de la combinación de procesos e hilos y se limita al equipo y configuración medidos. No se atribuyen diferencias a los núcleos físicos, hilos lógicos o WSL sin pruebas adicionales.
+Una mejora frente al secuencial no demuestra por sí sola una ventaja de OpenMP. La comparación con MPI puro usa el mismo total de recursos lógicos. El resultado se limita a la llave, el equipo y las combinaciones medidas.
 
 \section{Conclusiones}
-La posición de la llave modifica mucho el tiempo del reparto naive. Una solución al inicio de un rango puede producir un speedup aparente muy alto, mientras otra llave cercana puede obligar a recorrer casi todo el rango. Por eso una sola medición no basta para evaluar el reparto.
+Para la llave 16700000, el secuencial realizó 16700001 intentos y tardó 8.2229 segundos en promedio. La configuración más rápida fue permutado con 4 procesos y 1 hilo por proceso: 1.3514 segundos y speedup 6.08.
 
-La distribución cíclica reparte el avance sobre el espacio y permite una comparación más regular con el recorrido secuencial. El recorrido permutado reduce la relación entre el valor de la llave y su orden de prueba, aunque mantiene variación entre semillas. Ambos cubren el espacio sin repetir llaves entre procesos.
+El reparto naive reduce el trabajo hasta la solución cuando la llave queda cerca del inicio de un rango. El cíclico distribuye el avance por saltos y el permutado cambia el orden de búsqueda. Por ello, el valor de la llave no basta para anticipar qué algoritmo será el más rápido.
 
-El reparto dinámico permite entregar más bloques a los trabajadores que terminan antes. Su costo incluye los mensajes por bloque y un proceso dedicado a coordinar. El tamaño de bloque limita tanto la frecuencia de pedidos como el trabajo adicional después de un hallazgo.
+El dinámico reparte bloques según los pedidos de los trabajadores, con el costo de los mensajes y de reservar un proceso para coordinar. El híbrido combina procesos e hilos, cuya ventaja debe evaluarse frente a MPI puro con iguales recursos.
 
-La coordinación de la salida es tan importante como el reparto. Se deben completar las recepciones y envíos pendientes, incluso cuando no existe una solución o se producen varios hallazgos. En el híbrido, la bandera atómica y los arreglos separados evitan accesos compartidos sin control.
+Entre las configuraciones con más de un recurso lógico, la menor variación relativa entre repeticiones correspondió a dinámico con 4 procesos y 1 hilo: $100s_T/\overline{T}=1.25\%$. Este resultado describe la repetición de una sola llave y no permite concluir estabilidad entre distintas llaves.
 
-Las pruebas con un espacio reducido permiten comparar estrategias y repetir mediciones. Sus tiempos no deben presentarse como tiempos de búsqueda del espacio completo de 56 bits. El híbrido requiere comparar cantidades iguales de trabajadores antes de afirmar una mejora por el uso de hilos.
+Se recuperó la llave esperada en las 110 ejecuciones. La coordinación de mensajes y los datos separados por hilo permiten cerrar la búsqueda sin dejar comunicaciones pendientes. Los tiempos corresponden a un espacio limitado de 24 bits, no al recorrido completo de DES de 56 bits.
 
 \section{Recomendaciones}
 Se recomienda conservar el texto, la frase, la llave y las opciones de compilación cuando se comparan los programas. También conviene registrar los recursos visibles y evitar cambios de carga en el equipo durante una serie de mediciones.
@@ -311,41 +317,41 @@ Función y archivo & Entradas & Salida y propósito \\
 \clearpage
 \begin{landscape}
 \section{Bitácora y capturas de ejecución}
-La bitácora individual se encuentra en resultados/bitacora.csv y el resumen en resultados/resumen.csv. Cada corrida conserva su salida en resultados/ejecuciones/. Los registros de compilación, entorno, validación, OpenSSL, pruebas de la guía y tamaños secuenciales se encuentran en resultados/. Las capturas muestran esos registros de ejecuciones reales abiertos en el editor de texto.
+Se muestran los registros de compilación, validación, cifrado, búsqueda dinámica y entorno de ejecución.
 
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[trim=180.0bp 264.0bp 180.0bp 48.0bp,clip,width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/compilacion.jpg}
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/compilacion.jpg}
 \caption{Registro de compilación de los siete programas.}
 \end{figure}
 \clearpage
 \begin{figure}[p]
 \centering
-\includegraphics[trim=180.0bp 63.0bp 180.0bp 48.0bp,clip,width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/guia.jpg}
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/guia.jpg}
 \caption{Cifrado y descifrado con la llave 42 y pruebas de posición con cuatro procesos.}
 \end{figure}
 \clearpage
 \begin{figure}[p]
 \centering
-\includegraphics[trim=180.0bp 360.0bp 180.0bp 48.0bp,clip,width=\linewidth,height=0.38\textheight,keepaspectratio]{capturas/verificacion.jpg}
+\includegraphics[width=\linewidth,height=0.38\textheight,keepaspectratio]{capturas/verificacion.jpg}
 \caption{Verificación de recuperación, agotamiento del espacio y validación de entradas.}
 \end{figure}
 \begin{figure}[htbp]
 \centering
-\includegraphics[trim=180.0bp 330.0bp 180.0bp 48.0bp,clip,width=\linewidth,height=0.46\textheight,keepaspectratio]{capturas/openssl.jpg}
+\includegraphics[width=\linewidth,height=0.46\textheight,keepaspectratio]{capturas/openssl.jpg}
 \caption{Comparación del cifrado con la herramienta OpenSSL.}
 \end{figure}
 \clearpage
 \begin{figure}[p]
 \centering
-\includegraphics[trim=180.0bp 264.0bp 180.0bp 48.0bp,clip,width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/dinamico.jpg}
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/dinamico.jpg}
 \caption{Recuperación de una llave mediante bloques dinámicos.}
 \end{figure}
 \clearpage
 \begin{figure}[p]
 \centering
-\includegraphics[trim=180.0bp 252.0bp 180.0bp 48.0bp,clip,width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/entorno.jpg}
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{capturas/entorno.jpg}
 \caption{Entorno de ejecución y versiones de las herramientas.}
 \end{figure}
 \end{landscape}

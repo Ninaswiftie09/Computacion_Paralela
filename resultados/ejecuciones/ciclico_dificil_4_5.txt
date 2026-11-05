@@ -1,13 +1,13 @@
-$ mpirun --use-hwthread-cpus --bind-to none -np 4 ./bin/ciclico /tmp/tmp.kHu23kblmk/dificil.bin es\ una\ prueba\ de 22 
+$ mpirun --use-hwthread-cpus --bind-to none -np 4 ./bin/ciclico /tmp/tmp.VgwnjNL8dl/dificil.bin es\ una\ prueba\ de 24
 Programa: ciclico
 Procesos: 4
-Archivo cifrado: /tmp/tmp.kHu23kblmk/dificil.bin
+Archivo cifrado: /tmp/tmp.VgwnjNL8dl/dificil.bin
 Frase clave: "es una prueba de"
-Espacio de llaves: 2^22 (4194304 llaves)
-Llave encontrada: 921826
+Espacio de llaves: 2^24 (16777216 llaves)
+Llave encontrada: 16700000
 Texto descifrado: Esta es una prueba de proyecto 2
-Proceso que la encontró: 2
-Iteraciones por proceso: 202752 207872 230457 226304
-Iteraciones del proceso ganador: 230457
-Tiempo: 0.119968 s
-Velocidad: 7.23 millones de llaves por segundo
+Proceso que la encontró: 0
+Iteraciones por proceso: 4175001 4194304 4184064 4120576
+Iteraciones del proceso ganador: 4175001
+Tiempo: 2.874432 s
+Velocidad: 5.80 millones de llaves por segundo

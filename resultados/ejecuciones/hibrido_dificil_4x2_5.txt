@@ -1,14 +1,14 @@
-$ env OMP_NUM_THREADS=2 mpirun --use-hwthread-cpus --bind-to none -np 4 ./bin/hibrido /tmp/tmp.kHu23kblmk/dificil.bin es\ una\ prueba\ de 22 
+$ env OMP_NUM_THREADS=2 mpirun --use-hwthread-cpus --bind-to none -np 4 ./bin/hibrido /tmp/tmp.VgwnjNL8dl/dificil.bin es\ una\ prueba\ de 24
 Programa: hibrido
 Procesos: 4
-Archivo cifrado: /tmp/tmp.kHu23kblmk/dificil.bin
+Archivo cifrado: /tmp/tmp.VgwnjNL8dl/dificil.bin
 Frase clave: "es una prueba de"
-Espacio de llaves: 2^22 (4194304 llaves)
+Espacio de llaves: 2^24 (16777216 llaves)
 Hilos por proceso: 2
-Llave encontrada: 921826
+Llave encontrada: 16700000
 Texto descifrado: Esta es una prueba de proyecto 2
-Proceso que la encontró: 1
-Iteraciones por proceso: 279996 232133 247238 245959
-Iteraciones del proceso ganador: 232133
-Tiempo: 0.104227 s
-Velocidad: 9.65 millones de llaves por segundo
+Proceso que la encontró: 0
+Iteraciones por proceso: 4184653 4189184 4194304 4194304
+Iteraciones del proceso ganador: 4184653
+Tiempo: 2.672842 s
+Velocidad: 6.27 millones de llaves por segundo

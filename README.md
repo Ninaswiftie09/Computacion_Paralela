@@ -1,4 +1,4 @@
-﻿# Proyecto 2: búsqueda de llave DES con MPI
+# Proyecto 2: búsqueda de llave DES con MPI
 
 Computación Paralela y Distribuida, UVG, Sección 20.
 
@@ -31,8 +31,8 @@ Los comandos siguientes se ejecutan desde la raíz del repositorio. Con Docker, 
 ## Ejecución
 
 ```bash
-./bin/cifrador cifrar textos/prueba.txt textos/prueba.bin 42
-./bin/cifrador descifrar textos/prueba.bin 42
+./bin/cifrador cifrar textos/prueba.txt textos/prueba.bin 16700000
+./bin/cifrador descifrar textos/prueba.bin 16700000
 ./bin/secuencial textos/prueba.bin "es una prueba de" 24
 mpirun --use-hwthread-cpus --bind-to none -np 4 ./bin/naive textos/prueba.bin "es una prueba de" 24
 mpirun --use-hwthread-cpus --bind-to none -np 4 ./bin/ciclico textos/prueba.bin "es una prueba de" 24
@@ -59,11 +59,11 @@ Con un proceso, el dinámico usa búsqueda secuencial. Con varios, el proceso 0 
 
 ```bash
 bash scripts/evidencias.sh
-bash scripts/bitacora.sh 22 5 > resultados/bitacora.csv
+bash scripts/bitacora.sh 24 5 16700000 > resultados/bitacora.csv
 python3 scripts/validar_bitacora.py
 python3 scripts/graficas.py
 python3 scripts/catalogo.py
 ```
 
-`evidencias.sh` recompila y registra entorno, verificación de entradas, B.1, B.2 y la comparación con OpenSSL. `bitacora.sh` mide los programas con cinco llaves, cinco repeticiones y 1, 2, 4 y 8 procesos, y guarda cada corrida en `resultados/ejecuciones/`. Las tablas y figuras salen de esos datos. El detalle de la comunicación y la sincronización está en el informe.
+`evidencias.sh` recompila y registra entorno, verificación de entradas, B.1, B.2 y la comparación con OpenSSL. `bitacora.sh` mide la llave 16700000 en un espacio de 24 bits, con cinco repeticiones y 22 configuraciones. Guarda cada corrida en `resultados/ejecuciones/`. Las tablas y figuras salen de esos datos. El detalle de la comunicación y la sincronización está en el informe.
 

@@ -23,13 +23,9 @@ RUTA_CSV = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("resultados/bitacora
 DIR_IMG = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("docs/informe/img")
 DIR_IMG.mkdir(parents=True, exist_ok=True)
 
-ORDEN_DIF = ["facil", "media", "dificil", "naive_mejor", "naive_peor"]
+ORDEN_DIF = ["dificil"]
 ETIQUETA_DIF = {
-    "facil": "Fácil",
-    "media": "Media",
-    "dificil": "Difícil",
-    "naive_mejor": "Naive mejor",
-    "naive_peor": "Naive peor",
+    "dificil": "Llave 16700000",
 }
 COLOR = {
     "secuencial": "#555555",
@@ -84,15 +80,13 @@ def resumen(datos):
 
 
 def grafica_speedup_procesos(res):
-    """Speedup contra número de procesos, un panel por dificultad. Se dejan el
-    cíclico y el permutado. El naive da speedups de miles en unas llaves y
-    menos de 1 en otras, así que su comportamiento va en la figura aparte."""
+    """Speedup por cantidad de procesos para la llave de evaluación."""
     difs = [d for d in ORDEN_DIF if d in res["dificultad"].unique()]
     procs = sorted(res["procesos"].unique())
-    fig, matriz = plt.subplots(3, 2, figsize=(8.5, 9), sharey=True)
+    fig, matriz = plt.subplots(1, len(difs), figsize=(8.5, 4.8), squeeze=False)
     ejes = matriz.ravel()
     for eje, dif in zip(ejes, difs):
-        for programa in ("ciclico", "permutado", "dinamico"):
+        for programa in ("naive", "ciclico", "permutado", "dinamico"):
             sub = res[(res["dificultad"] == dif) & (res["programa"] == programa)]
             sub = sub.sort_values("procesos")
             if not sub.empty:
@@ -108,7 +102,7 @@ def grafica_speedup_procesos(res):
     for eje in ejes[len(difs):]:
         eje.axis("off")
     handles, labels = ejes[0].get_legend_handles_labels()
-    ejes[-1].legend(handles, labels, loc="center")
+    ejes[0].legend(handles, labels, loc="best")
     fig.suptitle("Speedup por número de procesos")
     fig.tight_layout()
     fig.savefig(DIR_IMG / "speedup_procesos.png", dpi=130)
@@ -135,7 +129,7 @@ def grafica_consistencia(res):
     eje.set_xticks(x)
     eje.set_xticklabels([ETIQUETA_DIF[d] for d in difs])
     eje.set_ylabel("Speedup contra secuencial (escala log)")
-    eje.set_title("Speedup con 4 procesos según la dificultad de la llave")
+    eje.set_title("Speedup con 4 procesos, llave 16700000")
     eje.legend()
     eje.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
@@ -170,10 +164,8 @@ def grafica_iteraciones(res):
 
 
 def grafica_hibrido(res):
-    """Speedup del híbrido comparado con el MPI puro del cíclico al mismo
-    número de trabajadores, para la dificultad media. El cíclico es la base
-    porque da un speedup estable para cualquier llave."""
-    dif = "media" if "media" in res["dificultad"].unique() else res["dificultad"].iloc[0]
+    """Compara híbrido y cíclico con igual cantidad de recursos lógicos."""
+    dif = res["dificultad"].iloc[0]
     sub = res[res["dificultad"] == dif]
     hib = sub[sub["programa"] == "hibrido"].sort_values(["procesos", "hilos"])
     base_mpi = sub[sub["programa"] == "ciclico"].set_index("procesos")["speedup"].to_dict()
@@ -194,8 +186,8 @@ def grafica_hibrido(res):
     eje.set_xticks(x)
     eje.set_xticklabels(etiquetas)
     eje.set_ylabel("Speedup contra secuencial")
-    eje.set_title(f"Speedup del híbrido MPI y OpenMP, llave {ETIQUETA_DIF.get(dif, dif).lower()}")
-    eje.legend()
+    eje.set_title(f"Speedup del híbrido MPI y OpenMP, {ETIQUETA_DIF.get(dif, dif).lower()}")
+    eje.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12))
     eje.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
     fig.savefig(DIR_IMG / "speedup_hibrido.png", dpi=130)
@@ -232,15 +224,24 @@ def tablas_latex(res):
         sub = res[(res.dificultad == dif) & (res.hilos == 1) &
                   ((res.procesos == 4) | (res.programa == "secuencial"))]
         for i, (_, f) in enumerate(sub.sort_values("programa").iterrows()):
-            filas.append(f"{ETIQUETA_DIF[dif]} & {nombres[f.programa]} & {f.segundos_media:.4f} & "
+            filas.append(f"16700000 & {nombres[f.programa]} & {f.segundos_media:.4f} & "
                          f"{f.segundos_desv:.4f} & {f.speedup:.2f}" + r" \\")
             if i < len(sub) - 1:
                 filas[-1] += "*"
     (destino / "comparacion.tex").write_text("\n".join(filas) + "\n", encoding="utf-8")
     filas = []
-    for _, f in res[(res.programa == "hibrido") & (res.dificultad == "media")].sort_values(["procesos", "hilos"]).iterrows():
+    for _, f in res[(res.programa == "hibrido") & (res.dificultad == "dificil")].sort_values(["procesos", "hilos"]).iterrows():
         filas.append(f"{int(f.procesos)} & {int(f.hilos)} & {f.segundos_media:.4f} & {f.segundos_desv:.4f} & {f.speedup:.2f}" + r" \\")
     (destino / "hibrido.tex").write_text("\n".join(filas) + "\n", encoding="utf-8")
+    filas = []
+    for _, f in res.sort_values(["programa", "procesos", "hilos"]).iterrows():
+        filas.append(f"{nombres[f.programa]} & {int(f.procesos)} & {int(f.hilos)} & "
+                     f"{f.segundos_media:.4f} & {f.segundos_desv:.4f} & {f.speedup:.2f}" + r" \\")
+    (destino / "configuraciones.tex").write_text("\n".join(filas) + "\n", encoding="utf-8")
+    secuencial = pd.read_csv(RUTA_CSV.parent / "secuencial_bits.csv")
+    filas = [f"{int(f.bits)} & {int(f.llave)} & {int(f.iteraciones)} & {f.segundos:.4f}" + r" \\"
+             for f in secuencial.itertuples(index=False)]
+    (destino / "secuencial.tex").write_text("\n".join(filas) + "\n", encoding="utf-8")
 
 
 def main():
