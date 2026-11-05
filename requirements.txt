@@ -1,0 +1,12 @@
+kagglehub
+matplotlib
+numpy
+pandas
+Pillow
+tqdm
+jupyter
+ipykernel
+tensorflow
+scikit-learn
+scikit-image
+joblib
