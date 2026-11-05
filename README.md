@@ -1,4 +1,4 @@
-# Proyecto 3: búsqueda de llave DES con MPI
+# Proyecto 3: 
 
 Computación Paralela y Distribuida, UVG, Sección 20.
 
