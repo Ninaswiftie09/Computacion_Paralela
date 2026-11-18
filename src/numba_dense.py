@@ -27,6 +27,7 @@ Uso:
 from __future__ import annotations
 
 import math
+import warnings
 
 import torch
 import torch.nn as nn
@@ -35,6 +36,9 @@ from numba import cuda, float32
 
 TILE = 16
 HILOS_REDUCCION = 256
+
+# Numba avisa cuando un grid tiene pocos bloques. En una capa de 29 salidas es lo esperado.
+warnings.filterwarnings("ignore", message=".*will likely result in GPU under-utilization.*")
 
 
 @cuda.jit

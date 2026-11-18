@@ -300,6 +300,7 @@ numba\_dense.py & GPU & Kernels propios de la capa densa escritos con Numba. \\
 cpu\_training.py & CPU & Entrenamiento de referencia en el CPU con el mismo código de gpu\_training.py. \\
 keras\_referencia.py & CPU & Medición del código original del Laboratorio 3 en Keras. \\
 benchmark.py & CPU y GPU & Ejecuta todas las fases con las mismas condiciones y registra tiempos y uso de recursos. \\
+comparar\_numba.py & GPU & Compara el modo optimizado y la variante con Numba en corridas alternadas. \\
 benchmark\_report.py & Ninguno & Calcula promedios, aceleraciones y consistencia, y genera las figuras. \\
 gpu\_profile.py & GPU & Registra los kernels del entrenamiento y verifica los kernels propios. \\
 monitor.py & Ninguno & Registra cada segundo el uso del CPU por núcleo y el estado de la GPU. \\
@@ -381,9 +382,23 @@ Fase & GPU directo & GPU optimizado & GPU con Numba \\
 \label{fig:speedup}
 \end{figure}
 
-El modo optimizado fue el más rápido, con 15.27x en el entrenamiento. Frente al modo directo ganó 1.3 s porque no copia lotes ni detiene la GPU en cada paso, y la mediana de uso de la GPU subió de entre 80 y 84 \% en el modo directo a 99 \%. La variante con kernels de Numba fue más lenta que el modo optimizado, con 12.14x, aunque sus kernels ocupan menos del 0.3 \% del tiempo de cálculo. La diferencia viene del costo de lanzar cada kernel desde Python, que es mayor que el cálculo de una capa tan pequeña. Mientras Python prepara cada lanzamiento la GPU espera, y la mediana de su uso bajó a entre 51 y 91 \%.
+El modo optimizado fue el más rápido, con 15.27x en el entrenamiento. Frente al modo directo ganó 1.3 s porque no copia lotes ni detiene la GPU en cada paso, y la mediana de uso de la GPU subió de entre 80 y 84 \% en el modo directo a 99 \%. El modo optimizado tuvo una corrida mucho más lenta que las demás y el de Numba tuvo dos, y por eso su desviación es alta. En esas corridas el uso de la GPU bajó a entre 20 y 40 \% sin que bajara su reloj, lo que indica que la GPU esperaba trabajo y no que se hubiera calentado. Coincidieron con la toma de capturas de pantalla. Una de esas capturas muestra una época de 3.38 s, cuando las demás duran cerca de 1.0 s. Por eso la tabla incluye la aceleración con medianas, 17.61x para el modo optimizado.
 
-El modo optimizado tuvo una corrida mucho más lenta que las demás y el de Numba tuvo dos, y por eso su desviación es alta. En esas corridas el uso de la GPU bajó a entre 20 y 40 \% sin que bajara su reloj, lo que indica que la GPU esperaba trabajo y no que se hubiera calentado. Coincidieron con la toma de capturas de pantalla. Una de esas capturas muestra una época de 3.38 s, cuando las demás duran cerca de 1.0 s. Por eso la tabla incluye la aceleración con medianas, 17.61x para el modo optimizado.
+En el benchmark, la variante con kernels de Numba quedó en 12.14x. Como su fase se ejecutó justo después de las capturas, se repitió la comparación con src/comparar\_numba.py, alternando cuatro corridas de cada variante y sin capturas. La Tabla \ref{tab:numbaalt} muestra que las dos quedan casi iguales, con la GPU entre 97 y 99 \% de uso en ambas. La variante con Numba tardó un 2 \% más. Sus kernels ocupan menos del 0.3 \% del cálculo, así que la diferencia viene del costo de lanzarlos desde Python y no del cálculo de la capa.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Entrenamiento con corridas alternadas, sin capturas, en segundos.}
+\label{tab:numbaalt}
+\begin{tabular}{lcrrrr}
+\toprule
+Variante & Corridas & Media & Mediana & Mínimo & Máximo \\
+\midrule
+\filastabla{tablas/comparacion_numba.tex}
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[H]
 \centering
@@ -494,7 +509,7 @@ CUDA también cambió dónde se gasta el tiempo. En el CPU, el entrenamiento ocu
 \subsection{¿Qué factores justifican o limitan el uso de CUDA?}
 Lo justifican la cantidad de cálculo repetido, que el entrenamiento recorre los datos diez veces y que todo el conjunto cabe en la memoria de la GPU. La copia de los datos tarda 0.094 s y se paga una sola vez.
 
-Lo limitan varios factores. El modelo y los lotes son pequeños, así que muchos kernels no llenan la GPU, como la normalización por lotes con 24 bloques y 14 \% de ocupación. Cada kernel tiene un costo de lanzamiento, y en la variante con Numba ese costo superó al cálculo de la capa. Las partes que siguen en el CPU limitan la ganancia total según la ley de Amdahl. Los resultados en la GPU no son idénticos entre corridas. En una laptop con Windows, la GPU comparte recursos con la pantalla y otros programas, y la temperatura llegó a 87 °C. Por último, TensorFlow no usa la GPU en Windows nativo, así que hubo que traducir el modelo a PyTorch.
+Lo limitan varios factores. El modelo y los lotes son pequeños, así que muchos kernels no llenan la GPU, como la normalización por lotes con 24 bloques y 14 \% de ocupación. Cada kernel tiene un costo de lanzamiento, y en la capa densa de Numba ese costo pesa más que su cálculo. Las partes que siguen en el CPU limitan la ganancia total según la ley de Amdahl. Los resultados en la GPU no son idénticos entre corridas. En una laptop con Windows, la GPU comparte recursos con la pantalla y otros programas, y la temperatura llegó a 87 °C. Por último, TensorFlow no usa la GPU en Windows nativo, así que hubo que traducir el modelo a PyTorch.
 
 \section{Conclusiones}
 El entrenamiento de la CNN del Laboratorio 3 fue 15.27 veces más rápido en la GPU que en el CPU, con los mismos datos, modelo y configuración.
@@ -505,7 +520,7 @@ La preparación de imágenes se acelera en el CPU repartiendo los archivos entre
 
 Mantener los datos en la memoria de la GPU y evitar sincronizaciones por lote subió la mediana de su uso de entre 80 y 84 \% a 99 \% y redujo el tiempo de entrenamiento.
 
-Un kernel propio permite controlar el reparto entre hilos, bloques y grids, pero en una capa pequeña el costo de lanzarlo desde Python supera la ganancia. Las bibliotecas como cuDNN siguen siendo la opción más rápida para las operaciones estándar.
+Un kernel propio permite controlar el reparto entre hilos, bloques y grids. En la capa densa del modelo dio el mismo resultado que PyTorch y tardó un 2 \% más, por el costo de lanzarlo desde Python. Para las operaciones estándar, cuDNN y cuBLAS siguen siendo la opción más simple y rápida.
 
 \section{Recomendaciones}
 Guardar el NPZ sin compresión o en enteros de 8 bits para reducir los 32.38 s de guardado, que hoy son la fase más larga del pipeline acelerado.

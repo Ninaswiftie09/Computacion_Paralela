@@ -1,20 +1,22 @@
 # Análisis de la solución secuencial y procesamiento en CPU
 
+Este documento resume la parte de CPU del proyecto. El análisis completo, con todas las tablas y figuras, está en `docs/informe/informe.pdf`.
+
 ## 1. Descripción general
 
-Se utilizó el conjunto de imágenes ASL Alphabet para clasificar 29 señas. Las imágenes se seleccionaron y prepararon en CPU antes de entrenar la red convolucional CNN2. Se trabajó con 600 imágenes por clase, para un total de **17,400 imágenes**, divididas en entrenamiento (12,180), validación (2,610) y prueba (2,610).
+Se utilizó el conjunto ASL Alphabet para clasificar 29 señas. La selección original del Laboratorio 3 toma 600 imágenes por clase con semilla 42, para un total de 17,400 imágenes divididas en entrenamiento (12,180), validación (2,610) y prueba (2,610). El modelo es `cnn_improved_a` del Laboratorio 3, la configuración que eligió el ajuste original, traducida a PyTorch en `src/gpu_training.py`.
 
 ## 2. Operaciones identificadas
 
 | No. | Operación | Descripción |
 |---|---|---|
-| 1 | Selección y división | Se seleccionaron imágenes por clase con semilla 42 y se distribuyeron en conjuntos 70 % / 15 % / 15 %. |
-| 2 | Lectura | Se abrieron y decodificaron los archivos de imagen. |
-| 3 | Preprocesamiento | Se convirtieron las imágenes a RGB y se ajustaron a 64 × 64 píxeles. |
-| 4 | Normalización | Se transformaron los píxeles a valores entre −1 y 1, en formato `float32` y orden NCHW. |
-| 5 | Almacenamiento | Se guardaron imágenes y etiquetas en `results/asl_prepared.npz`. |
-| 6 | Entrenamiento | Se ejecutaron propagación hacia adelante, cálculo de pérdida y actualización de pesos de CNN2 en CPU. |
-| 7 | Validación y prueba | Se evaluó el modelo durante cada época y al finalizar el entrenamiento. |
+| 1 | Selección y división | Se listan los archivos de cada clase, se mezclan con semilla 42 y se reparten en 70 %, 15 % y 15 %. |
+| 2 | Lectura | Se abren y decodifican los archivos JPEG. |
+| 3 | Preprocesamiento | Las imágenes se convierten a RGB y se redimensionan a 64 × 64 píxeles con LANCZOS. |
+| 4 | Normalización | Los píxeles se dividen entre 255, como en el Laboratorio 3, y se ordenan en formato NCHW. |
+| 5 | Almacenamiento | Imágenes y etiquetas se guardan en un archivo NPZ. |
+| 6 | Entrenamiento | Propagación hacia adelante, cálculo de la pérdida, retropropagación y actualización con Adam. |
+| 7 | Validación y prueba | El modelo se evalúa al final de cada época y al terminar el entrenamiento. |
 
 ### Operaciones repetitivas
 
@@ -25,54 +27,44 @@ Se utilizó el conjunto de imágenes ASL Alphabet para clasificar 29 señas. Las
 | Validación | 2,610 imágenes, lotes de 64 | 41 lotes × 10 épocas = 410 |
 | Evaluación final | 2,610 imágenes, lotes de 64 | 41 lotes |
 
-## 3. Configuración y procedimiento
+## 3. Procedimiento
 
-Se utilizó la CNN2 definida en `src/gpu_training.py`, con optimizador Adam, tasa de aprendizaje de 0.001, función de pérdida `CrossEntropyLoss`, tamaño de lote de 64 y semilla 42. El conjunto de datos se preparó tres veces con los mismos parámetros. Después, se realizó un calentamiento de una época, que no se incluyó en las mediciones, y **cinco ejecuciones completas de entrenamiento en CPU**, con diez épocas cada una.
+Todas las mediciones definitivas se hicieron con `src/benchmark.py` en la misma laptop que tiene la GPU: Intel Core i9-13900HX con 24 núcleos (8 de alto rendimiento y 16 de eficiencia) y 32 hilos, y 15.7 GB de RAM. La preparación se ejecutó tres veces con 1, 2, 4, 8, 16, 24 y 32 procesos. El guardado y la carga del NPZ se midieron tres veces. El entrenamiento en CPU tuvo una época de calentamiento que no se mide y cinco ejecuciones de diez épocas con lotes de 64, Adam con tasa de aprendizaje de 0.001 y semilla 42.
 
-Se registraron los tiempos de selección, procesamiento y guardado del conjunto de imágenes. Para el entrenamiento se midieron la duración por época, el tiempo de entrenamiento y el tiempo total, además de la exactitud de validación.
+La preparación en paralelo está en `prepare_arrays` de `src/cpu_pipeline.py`, con el parámetro `workers`. Las rutas se reparten en lotes de 200 entre procesos independientes. Todas las variantes producen exactamente los mismos datos, comprobados con una huella SHA-256.
 
 ## 4. Resultados
 
-### 4.1. Preparación de imágenes en CPU
+### 4.1. Preparación de imágenes
 
-| Ejecución | Selección (s) | Preparación (s) | Guardado (s) | Total (s) |
-|---|---:|---:|---:|---:|
-| 1 | 6.574 | 308.447 | 151.772 | 466.793 |
-| 2 | 16.725 | 66.400 | 149.837 | 232.962 |
-| 3 | 17.210 | 64.299 | 19,809.756 | 19,891.265 |
-| **Promedio** | **13.503** | **146.382** | **6,703.788** | **6,863.673** |
-
-La preparación de imágenes fue más rápida en las ejecuciones segunda y tercera. Sin embargo, el guardado de la tercera ejecución tuvo una demora extraordinaria. Por ese motivo, el promedio total está muy afectado por ese valor y no representa un tiempo habitual de preparación. Se conservaron las tres mediciones y no se atribuyó la demora a una causa específica sin evidencia adicional.
-
-### 4.2. Entrenamiento CNN2 en CPU
-
-| Ejecución | Entrenamiento (s, aprox.) |
+| Fase | Tiempo (s) |
 |---|---:|
-| 1 | 1,183.52 |
-| 2 | 762.63 |
-| 3 | 1,261.88 |
-| 4 | 775.26 |
-| 5 | 1,128.08 |
-| **Promedio** | **1,022.27** |
+| Selección del split | 12.59 ± 0.28 |
+| Preparación con 1 proceso | 14.17 ± 2.53 |
+| Preparación con 8 procesos | 3.38 ± 0.14, más 1.61 de arranque |
+| Preparación con 16 procesos | 2.02 ± 0.16, más 3.44 de arranque |
+| Guardado del NPZ | 32.38 ± 2.62 |
+| Carga del NPZ | 2.19 ± 0.43 |
 
-Los tiempos individuales se aproximaron mediante la suma de las épocas mostradas en el registro. El resumen generado por el programa reportó **1,022.273 segundos** como tiempo promedio de entrenamiento y **1,030.721 segundos** como tiempo total promedio, incluyendo configuración y evaluación. La desviación estándar aproximada del tiempo de entrenamiento fue de **236.13 segundos**.
+Solo con el trabajo, la preparación llega a 7.02x con 16 procesos. Si se cuenta el arranque de los procesos, el mejor resultado es 2.84x con 8 procesos. La primera preparación tardó 17.07 s y las siguientes cerca de 12.7 s porque los archivos ya estaban en el caché del sistema.
 
-La exactitud de validación al finalizar la décima época fue de **98.81 %** en las cinco ejecuciones. Esta cifra corresponde a validación y no debe interpretarse como exactitud del conjunto de prueba.
+### 4.2. Entrenamiento en CPU
 
-### 4.3. Interpretación
+| Versión | Corridas | Entrenamiento (s) | Exactitud de prueba |
+|---|---:|---:|---:|
+| Keras, código original del Laboratorio 3 | 2 | 192.16 ± 15.08 | 98.05 % |
+| PyTorch, misma red traducida | 5 | 176.00 ± 6.63 | 94.44 % |
 
-Se observó que los tiempos variaron aun cuando se mantuvieron los mismos datos y parámetros. La mayor diferencia apareció en la cuarta época de la tercera ejecución, que tardó 530.68 segundos. Estas variaciones podrían relacionarse con la carga del equipo y otros procesos del sistema, aunque no se identificó una causa definitiva. Por ello, se utilizó el promedio de las cinco ejecuciones y se conservaron los registros originales.
+Las dos versiones tienen 164,837 parámetros entrenables y siguen la misma curva de aprendizaje. La diferencia de exactitud viene de la última época, porque sin ajuste de la tasa de aprendizaje la exactitud oscila entre épocas. En la novena época PyTorch llegó a 97.28 % de validación. Las cinco corridas en CPU dieron el mismo resultado.
 
-## 5. Decisiones técnicas y conclusión
+## 5. Decisiones técnicas
 
-Se asignaron a CPU la lectura, decodificación, redimensionamiento y normalización de imágenes porque estas tareas requieren gestionar archivos y preparar los datos antes del entrenamiento. El resultado se guardó en un archivo NPZ reutilizable para mantener el mismo conjunto de imágenes en las pruebas posteriores.
+La lectura, la decodificación, la redimensión y la normalización se mantuvieron en el CPU porque tratan archivos pequeños e independientes y la decodificación de JPEG toma muchas decisiones por byte. Ese trabajo se reparte bien entre procesos. Se usaron procesos y no hilos porque el intérprete de Python solo ejecuta código de Python en un hilo a la vez. El NPZ permite que las versiones de CPU y GPU entrenen con exactamente los mismos datos.
 
-La versión CPU permite establecer una referencia de tiempo con la misma CNN2 y configuración previstas para CUDA. **El cálculo de aceleración (speedup) queda pendiente de disponer de las mediciones de GPU**; no se puede concluir todavía que CUDA haya reducido el tiempo de ejecución.
+## 6. Medición anterior
 
-## 6. Evidencias
+Antes de las mediciones definitivas se midió una red llamada CNN2 en otra laptop, con 4 hilos de PyTorch y normalización entre −1 y 1. El entrenamiento promedio fue de 1,022.27 s, y uno de los guardados del NPZ tardó 19,809.76 s. Ese archivo se escribía dentro de una carpeta de OneDrive, que es la causa más probable de la demora, porque en la laptop de las mediciones definitivas el mismo guardado fuera de OneDrive tarda cerca de 30 s. Esos tiempos no se usaron para calcular la aceleración porque vienen de otro equipo y de un modelo que no pertenece al Laboratorio 3. Sus archivos se conservan como registro en `results/cpu_preprocessing_times.*`, `results/cpu_training_times.*`, `evidence/cpu_training.log` y `evidence/capturas/cpu_usage.png`.
 
-- `results/asl_split_manifest.csv`: distribución de imágenes.
-- `results/cpu_preprocessing_times.csv` y `.json`: mediciones de preparación.
-- `results/cpu_training_times.csv` y `.json`: mediciones de entrenamiento.
-- `evidence/cpu_training.log`: registro de las cinco ejecuciones.
-- `evidence/capturas/cpu_usage.png`: captura del uso de CPU durante el entrenamiento, **si fue tomada**.
+## 7. Evidencias
+
+Las mediciones definitivas están en `results/benchmark`. `corridas_preparacion.csv` y `corridas_almacenamiento.csv` tienen los tiempos de la preparación, y `corridas_entrenamiento.csv` los del entrenamiento. `monitor_cpu.csv` registra el uso de cada núcleo cada segundo, y la figura `figuras/uso_cpu_nucleos.png` lo muestra. Las capturas del Administrador de tareas están en `evidence/capturas/cpu_preparacion_paralela.png` y `evidence/capturas/cpu_entrenamiento_32_hilos.png`. La referencia en Keras está en `results/keras_referencia`.

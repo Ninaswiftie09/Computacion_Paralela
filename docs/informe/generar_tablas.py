@@ -216,8 +216,19 @@ def tabla_transferencia(d: dict) -> None:
     escribir("transferencia", filas)
 
 
+def tabla_comparacion_numba() -> None:
+    tabla = pd.read_csv(PERFIL / "comparacion_numba.csv")
+    nombres = {"gpu_optimizado": "GPU optimizado", "gpu_numba": "GPU con kernel Numba"}
+    filas = []
+    for objetivo, nombre in nombres.items():
+        g = tabla[tabla["objetivo"] == objetivo]["train_s"]
+        filas.append(f"{nombre} & {len(g)} & {pm(g)} & {num(g.median())} & {num(g.min())} & {num(g.max())} \\\\")
+    escribir("comparacion_numba", filas)
+
+
 def main() -> None:
     SALIDA.mkdir(parents=True, exist_ok=True)
+    tabla_comparacion_numba()
     d = cargar()
     tabla_secuencial(d)
     tabla_preparacion(d)
