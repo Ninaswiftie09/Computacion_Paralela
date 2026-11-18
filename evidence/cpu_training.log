@@ -1,0 +1,2 @@
+C:\Users\ninan\OneDrive\Documentos\Escritorio\UVG\VIII SEMESTRE\Computación Paralela\Computacion_Paralela\src\gpu_training.py:177: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=amp and cuda)
