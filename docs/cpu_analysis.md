@@ -75,4 +75,4 @@ La versión CPU permite establecer una referencia de tiempo con la misma CNN2 y 
 - `results/cpu_preprocessing_times.csv` y `.json`: mediciones de preparación.
 - `results/cpu_training_times.csv` y `.json`: mediciones de entrenamiento.
 - `evidence/cpu_training.log`: registro de las cinco ejecuciones.
-- `evidence/cpu_usage.png`: captura del uso de CPU durante el entrenamiento, **si fue tomada**.
+- `evidence/capturas/cpu_usage.png`: captura del uso de CPU durante el entrenamiento, **si fue tomada**.
