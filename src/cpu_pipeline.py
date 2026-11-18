@@ -6,6 +6,7 @@ import argparse
 import json
 import statistics
 import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -25,42 +26,73 @@ def project_path(value: str) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
-def prepare_arrays(manifest: pd.DataFrame, image_size: int, data_format: str) -> dict:
-    """Lee, decodifica, redimensiona y prepara las imágenes sin utilizar CUDA."""
+def load_image(image_path: str, image_size: int) -> np.ndarray:
+    """Abre un JPG, lo convierte a RGB y lo redimensiona con LANCZOS, igual que el Lab 3."""
+    with Image.open(image_path) as image:
+        resized = image.convert("RGB").resize((image_size, image_size), Image.Resampling.LANCZOS)
+        return np.asarray(resized, dtype=np.uint8)
+
+
+def load_batch(task: tuple[list[str], int]) -> np.ndarray:
+    """Trabajo de un proceso: prepara un lote de imágenes y devuelve sus píxeles en uint8."""
+    paths, image_size = task
+    return np.stack([load_image(path, image_size) for path in paths])
+
+
+def _ready(_: int) -> int:
+    return 0
+
+
+def start_pool(workers: int) -> ProcessPoolExecutor:
+    """Crea el pool y espera a que todos los procesos estén listos, para medir el arranque aparte."""
+    pool = ProcessPoolExecutor(max_workers=workers)
+    list(pool.map(_ready, range(workers * 4)))
+    return pool
+
+
+def prepare_arrays(manifest: pd.DataFrame, image_size: int, data_format: str,
+                   workers: int = 1, batch: int = 200,
+                   pool: ProcessPoolExecutor | None = None) -> dict:
+    """Lee, decodifica, redimensiona y prepara las imágenes sin utilizar CUDA.
+
+    Con workers igual a 1 las imágenes se procesan una por una en un solo núcleo. Con más
+    workers se reparten en lotes entre procesos independientes, uno por núcleo. Cada imagen
+    se procesa por separado, así que el resultado es idéntico en ambos casos. Si se recibe
+    un pool ya iniciado se reutiliza y no se cierra.
+    """
     classes = sorted(manifest["class_name"].unique().tolist())
     if len(classes) != 29:
         raise ValueError(f"Se esperaban 29 clases ASL, pero se encontraron {len(classes)}.")
     label_by_class = {name: index for index, name in enumerate(classes)}
     arrays: dict[str, np.ndarray] = {"clases": np.asarray(classes)}
 
-    for target, source in SPLITS.items():
-        rows = manifest.loc[manifest["split"] == source]
-        if rows.empty:
-            raise ValueError(f"El conjunto {source} no contiene imágenes.")
+    own_pool = pool is None and workers > 1
+    if own_pool:
+        pool = start_pool(workers)
+    try:
+        for target, source in SPLITS.items():
+            rows = manifest.loc[manifest["split"] == source]
+            if rows.empty:
+                raise ValueError(f"El conjunto {source} no contiene imágenes.")
+            paths = [str(PROJECT_ROOT / path) for path in rows["source_path"]]
 
-        if data_format == "float32":
-            x = np.empty((len(rows), 3, image_size, image_size), dtype=np.float32)
-        else:
-            x = np.empty((len(rows), image_size, image_size, 3), dtype=np.uint8)
-        y = np.empty(len(rows), dtype=np.int64)
-
-        for index, row in enumerate(rows.itertuples(index=False)):
-            image_path = PROJECT_ROOT / row.source_path
-            with Image.open(image_path) as image:
-                resized = image.convert("RGB").resize(
-                    (image_size, image_size), Image.Resampling.LANCZOS
-                )
-                pixels = np.asarray(resized, dtype=np.uint8)
+            if pool is None:
+                pixels = np.stack([load_image(path, image_size) for path in paths])
+            else:
+                tasks = [(paths[i:i + batch], image_size) for i in range(0, len(paths), batch)]
+                pixels = np.concatenate(list(pool.map(load_batch, tasks)))
 
             if data_format == "float32":
-                # Normalización equivalente a (pixel / 255 - 0.5) / 0.5.
-                x[index] = ((pixels.astype(np.float32) / 255.0 - 0.5) / 0.5).transpose(2, 0, 1)
+                # División entre 255, como en el Lab 3, y orden NCHW para PyTorch.
+                x = np.ascontiguousarray(pixels.transpose(0, 3, 1, 2), dtype=np.float32)
+                x /= 255.0
             else:
-                x[index] = pixels
-            y[index] = label_by_class[row.class_name]
-
-        arrays[f"X_{target}"] = x
-        arrays[f"y_{target}"] = y
+                x = pixels
+            arrays[f"X_{target}"] = x
+            arrays[f"y_{target}"] = rows["class_name"].map(label_by_class).to_numpy(dtype=np.int64)
+    finally:
+        if own_pool:
+            pool.shutdown(wait=True, cancel_futures=True)
 
     return arrays
 
@@ -81,6 +113,8 @@ def main() -> None:
     parser.add_argument("--format", choices=["float32", "uint8"], default="float32")
     parser.add_argument("--output", default="results/asl_prepared.npz")
     parser.add_argument("--results-dir", default="results")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="Procesos para preparar las imágenes, 1 equivale a un solo núcleo")
     args = parser.parse_args()
 
     if args.runs < 1 or args.images_per_class < 10:
@@ -99,7 +133,7 @@ def main() -> None:
         split_s = time.perf_counter() - start
 
         start_prepare = time.perf_counter()
-        arrays = prepare_arrays(manifest, IMAGE_SIZE, args.format)
+        arrays = prepare_arrays(manifest, IMAGE_SIZE, args.format, workers=args.workers)
         prepare_s = time.perf_counter() - start_prepare
 
         start_save = time.perf_counter()
@@ -129,6 +163,7 @@ def main() -> None:
         "images_per_class": args.images_per_class,
         "image_size": IMAGE_SIZE,
         "format": args.format,
+        "workers": args.workers,
         "classes": arrays["clases"].tolist(),
         "split_counts": counts,
         "metrics": {key: describe(records, key) for key in

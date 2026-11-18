@@ -10,4 +10,9 @@ tensorflow
 scikit-learn
 scikit-image
 joblib
+psutil
+# torch con CUDA en Windows: pip install torch --index-url https://download.pytorch.org/whl/cu130
 torch
+# Kernels propios en CUDA Python (src/numba_dense.py). NVVM debe coincidir con el CUDA 13.0 de torch.
+numba-cuda[cu13]
+nvidia-nvvm==13.0.*

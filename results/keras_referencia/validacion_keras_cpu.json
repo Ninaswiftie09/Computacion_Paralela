@@ -1,0 +1,23 @@
+{
+  "entorno": {
+    "tensorflow": "2.21.0",
+    "sistema": "Windows-11-10.0.26200-SP0",
+    "dispositivos": [
+      "/physical_device:CPU:0"
+    ],
+    "hilos_intra": 0,
+    "hilos_inter": 0
+  },
+  "config": {
+    "name": "cnn_improved_a",
+    "filters": [
+      24,
+      48,
+      96
+    ],
+    "dropout": 0.35,
+    "learning_rate": 0.001
+  },
+  "epocas": 10,
+  "npz": "C:\\Users\\rjbar\\datasets\\p3_work\\asl_prepared.npz"
+}

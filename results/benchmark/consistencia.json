@@ -1,33 +1,49 @@
 {
   "huella_preparacion_identica": true,
+  "huella_npz_igual_a_preparacion": true,
   "cpu": {
-    "test_acc_media": 0.9934865900383143,
-    "test_acc_min": 0.9934865900383142,
-    "test_acc_max": 0.9934865900383142,
-    "val_acc_final_media": 0.9927203065134101,
+    "test_acc_media": 0.9444444444444444,
+    "test_acc_min": 0.9444444444444444,
+    "test_acc_max": 0.9444444444444444,
+    "val_acc_final_media": 0.9425287356321841,
     "diferencia_test_acc_contra_cpu": 0.0,
-    "cv_entrenamiento_pct": 9.50575890383439,
+    "cv_entrenamiento_pct": 3.7648846398321174,
     "corridas_atipicas": [],
     "memoria_pico_mb": 0.0
   },
   "gpu_directo": {
-    "test_acc_media": 0.9891187739463602,
-    "test_acc_min": 0.9823754789272032,
-    "test_acc_max": 0.9950191570881226,
-    "val_acc_final_media": 0.9898850574712643,
-    "diferencia_test_acc_contra_cpu": -0.004367816091954135,
-    "cv_entrenamiento_pct": 0.7119017077961475,
+    "test_acc_media": 0.9257471264367816,
+    "test_acc_min": 0.8957854406130268,
+    "test_acc_max": 0.964750957854406,
+    "val_acc_final_media": 0.9249808429118774,
+    "diferencia_test_acc_contra_cpu": -0.018697318007662833,
+    "cv_entrenamiento_pct": 0.9564856047152152,
     "corridas_atipicas": [],
-    "memoria_pico_mb": 438.82958984375
+    "memoria_pico_mb": 285.58251953125
   },
   "gpu_optimizado": {
-    "test_acc_media": 0.979080459770115,
-    "test_acc_min": 0.9701149425287356,
-    "test_acc_max": 0.9877394636015324,
-    "val_acc_final_media": 0.9802298850574713,
-    "diferencia_test_acc_contra_cpu": -0.014406130268199258,
-    "cv_entrenamiento_pct": 1.2982655625682953,
-    "corridas_atipicas": [],
-    "memoria_pico_mb": 1379.4111328125
-  }
+    "test_acc_media": 0.9816091954022989,
+    "test_acc_min": 0.967816091954023,
+    "test_acc_max": 0.9942528735632185,
+    "val_acc_final_media": 0.9822222222222223,
+    "diferencia_test_acc_contra_cpu": 0.03716475095785443,
+    "cv_entrenamiento_pct": 28.62086567764724,
+    "corridas_atipicas": [
+      5
+    ],
+    "memoria_pico_mb": 1219.6640625
+  },
+  "gpu_numba": {
+    "test_acc_media": 0.9603831417624521,
+    "test_acc_min": 0.9003831417624522,
+    "test_acc_max": 0.989272030651341,
+    "val_acc_final_media": 0.9569348659003831,
+    "diferencia_test_acc_contra_cpu": 0.015938697318007677,
+    "cv_entrenamiento_pct": 25.186581600961404,
+    "corridas_atipicas": [
+      1
+    ],
+    "memoria_pico_mb": 1219.6640625
+  },
+  "procesos_mas_rapidos": 8
 }

@@ -20,12 +20,14 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from .utils import PROJECT_ROOT
 
-NOMBRES = {"cpu": "CPU", "gpu_directo": "GPU directo", "gpu_optimizado": "GPU optimizado"}
-COLORES = {"cpu": "#2a78d6", "gpu_directo": "#eb6834", "gpu_optimizado": "#1baf7a"}
+NOMBRES = {"cpu": "CPU", "gpu_directo": "GPU directo", "gpu_optimizado": "GPU optimizado",
+           "gpu_numba": "GPU con kernel Numba"}
+NOMBRES_PIPELINE = {**NOMBRES, "gpu_optimizado_paralelo": "GPU optimizado\ny preparación paralela"}
+COLORES = {"cpu": "#2a78d6", "gpu_directo": "#eb6834", "gpu_optimizado": "#1baf7a",
+           "gpu_numba": "#eda100"}
 COLORES_FASE = {
-    "Preparación": "#eda100",
-    "Guardado y carga": "#e87ba4",
-    "Configuración": "#008300",
+    "Preparación": "#e87ba4",
+    "Guardado y carga": "#008300",
     "Entrenamiento": "#6250d6",
     "Prueba": "#e34948",
 }
@@ -67,11 +69,18 @@ def describir(serie: pd.Series) -> dict:
                 minimo_s=float(serie.min()), maximo_s=float(serie.max()), n=int(len(serie)))
 
 
-def tabla_tiempos(prep: pd.DataFrame, trans: pd.DataFrame, entr: pd.DataFrame) -> pd.DataFrame:
-    filas = []
-    for columna, fase in (("seleccion_s", "Selección"), ("preparacion_s", "Preparación de imágenes"),
-                          ("guardado_s", "Guardado NPZ"), ("carga_s", "Carga NPZ")):
-        filas.append(dict(fase=fase, objetivo="cpu", **describir(prep[columna])))
+def tabla_tiempos(prep: pd.DataFrame, alm: pd.DataFrame, trans: pd.DataFrame,
+                  entr: pd.DataFrame) -> pd.DataFrame:
+    filas = [dict(fase="Selección", objetivo="cpu",
+                  **describir(prep.loc[prep["workers"] == 1, "seleccion_s"]))]
+    for workers, grupo in prep.groupby("workers"):
+        filas.append(dict(fase=f"Preparación de imágenes ({workers} procesos)", objetivo="cpu",
+                          **describir(grupo["preparacion_s"])))
+        if workers > 1:
+            filas.append(dict(fase=f"Arranque del pool ({workers} procesos)", objetivo="cpu",
+                              **describir(grupo["arranque_pool_s"].iloc[:1])))
+    filas.append(dict(fase="Guardado NPZ", objetivo="cpu", **describir(alm["guardado_s"])))
+    filas.append(dict(fase="Carga NPZ", objetivo="cpu", **describir(alm["carga_s"])))
     for memoria, grupo in trans.groupby("memoria"):
         filas.append(dict(fase=f"Transferencia RAM a VRAM ({memoria})", objetivo="gpu",
                           **describir(grupo["segundos"])))
@@ -85,29 +94,52 @@ def tabla_tiempos(prep: pd.DataFrame, trans: pd.DataFrame, entr: pd.DataFrame) -
     return pd.DataFrame(filas)
 
 
-def totales(prep: pd.DataFrame, entr: pd.DataFrame) -> pd.DataFrame:
-    comun = float((prep["seleccion_s"] + prep["preparacion_s"]).mean())
-    io = float((prep["guardado_s"] + prep["carga_s"]).mean())
+def costo_preparacion(prep: pd.DataFrame) -> pd.Series:
+    """Tiempo de una preparación completa: arranque del pool más el trabajo."""
+    grupos = prep.groupby("workers")
+    return grupos["preparacion_s"].mean() + grupos["arranque_pool_s"].first()
+
+
+def mejores_workers(prep: pd.DataFrame) -> int:
+    return int(costo_preparacion(prep).idxmin())
+
+
+def totales(prep: pd.DataFrame, alm: pd.DataFrame, entr: pd.DataFrame) -> pd.DataFrame:
+    seleccion = float(prep.loc[prep["workers"] == 1, "seleccion_s"].mean())
+    por_workers = costo_preparacion(prep)
+    io = float((alm["guardado_s"] + alm["carga_s"]).mean())
     filas = []
-    for objetivo, grupo in entr.groupby("objetivo", sort=False):
-        filas.append({
-            "objetivo": objetivo,
-            "Preparación": comun,
-            "Guardado y carga": io,
-            "Configuración": grupo["setup_s"].mean(),
-            "Entrenamiento": grupo["train_s"].mean(),
-            "Prueba": grupo["test_s"].mean(),
-        })
+    medias = entr.groupby("objetivo", sort=False)[["setup_s", "train_s", "test_s"]].mean()
+    for objetivo, fila in medias.iterrows():
+        filas.append(dict(objetivo=objetivo, Preparación=seleccion + por_workers.loc[1],
+                          **{"Guardado y carga": io,
+                             "Entrenamiento": fila["setup_s"] + fila["train_s"],
+                             "Prueba": fila["test_s"]}))
+    if "gpu_optimizado" in medias.index and len(por_workers) > 1:
+        fila = medias.loc["gpu_optimizado"]
+        filas.append(dict(objetivo="gpu_optimizado_paralelo",
+                          Preparación=seleccion + por_workers.loc[mejores_workers(prep)],
+                          **{"Guardado y carga": io,
+                             "Entrenamiento": fila["setup_s"] + fila["train_s"],
+                             "Prueba": fila["test_s"]}))
     tabla = pd.DataFrame(filas).set_index("objetivo")
     tabla["Total"] = tabla.sum(axis=1)
     return tabla
 
 
-def tabla_speedup(entr: pd.DataFrame, total: pd.DataFrame) -> pd.DataFrame:
-    medias = entr.groupby("objetivo")[["train_s", "epoch_mean_s", "test_s"]].mean()
+def tabla_speedup(prep: pd.DataFrame, entr: pd.DataFrame, total: pd.DataFrame) -> pd.DataFrame:
     filas = []
+    trabajo = prep.groupby("workers")["preparacion_s"].mean()
+    completo = costo_preparacion(prep)
+    for workers in trabajo.index:
+        if workers != 1:
+            filas.append(dict(fase="Preparación de imágenes", objetivo=f"cpu_{workers}",
+                              speedup=trabajo.loc[1] / trabajo.loc[workers]))
+            filas.append(dict(fase="Preparación con arranque del pool", objetivo=f"cpu_{workers}",
+                              speedup=completo.loc[1] / completo.loc[workers]))
+    medias = entr.groupby("objetivo")[["train_s", "test_s"]].mean()
     if "cpu" not in medias.index:
-        return pd.DataFrame()
+        return pd.DataFrame(filas)
     comun = total.loc["cpu", ["Preparación", "Guardado y carga"]].sum()
     p = 1 - comun / total.loc["cpu", "Total"]
     for objetivo in medias.index:
@@ -123,12 +155,19 @@ def tabla_speedup(entr: pd.DataFrame, total: pd.DataFrame) -> pd.DataFrame:
             dict(fase="Pipeline según Amdahl", objetivo=objetivo,
                  speedup=1 / ((1 - p) + p / s_entr)),
         ]
+    if "gpu_optimizado_paralelo" in total.index:
+        filas.append(dict(fase="Pipeline completo", objetivo="gpu_optimizado_paralelo",
+                          speedup=total.loc["cpu", "Total"] / total.loc["gpu_optimizado_paralelo", "Total"]))
     filas.append(dict(fase="Límite de Amdahl", objetivo="cualquiera", speedup=1 / (1 - p)))
     return pd.DataFrame(filas)
 
 
-def consistencia(prep: pd.DataFrame, entr: pd.DataFrame) -> dict:
-    resultado = {"huella_preparacion_identica": bool(prep["huella"].nunique() == 1)}
+def consistencia(prep: pd.DataFrame, entr: pd.DataFrame, huella_cargada: str | None) -> dict:
+    resultado = {
+        "huella_preparacion_identica": bool(prep["huella"].nunique() == 1),
+        "huella_npz_igual_a_preparacion": bool(huella_cargada == prep["huella"].iloc[0])
+        if huella_cargada else None,
+    }
     acc_cpu = entr.loc[entr["objetivo"] == "cpu", "test_acc"].mean()
     for objetivo, grupo in entr.groupby("objetivo", sort=False):
         mediana = grupo["train_s"].median()
@@ -145,6 +184,40 @@ def consistencia(prep: pd.DataFrame, entr: pd.DataFrame) -> dict:
             memoria_pico_mb=float(grupo["peak_mem_mb"].max()),
         )
     return resultado
+
+
+def figura_escalado(prep: pd.DataFrame, nucleos_fisicos: int | None, destino: Path) -> None:
+    trabajo = prep.groupby("workers")["preparacion_s"].mean()
+    if len(trabajo) < 2:
+        return
+    completo = costo_preparacion(prep)
+    figura, eje = plt.subplots(figsize=(8, 3.8))
+    eje.plot(trabajo.index, trabajo.index, color=TENUE, lw=1, ls="--")
+    ideal_y = min(trabajo.index[-1], max(float((trabajo.loc[1] / trabajo).max()) * 1.35, 2))
+    eje.text(ideal_y, ideal_y, " ideal", color=TINTA_2, fontsize=8, va="center")
+    series = ((trabajo.loc[1] / trabajo, COLORES["cpu"], "Solo el trabajo", 8),
+              (completo.loc[1] / completo, COLORES["gpu_directo"], "Con arranque del pool", -14))
+    for serie, color, nombre, desplazamiento in series:
+        eje.plot(serie.index, serie.values, color=color, lw=2, marker="o", markersize=6,
+                 markeredgecolor=SUPERFICIE, label=nombre)
+        for workers, valor in serie.items():
+            if workers > 1:
+                eje.annotate(f"{valor:.1f}x", (workers, valor), xytext=(0, desplazamiento),
+                             textcoords="offset points", ha="center", color=TINTA, fontsize=8)
+    eje.legend(loc="upper left")
+    if nucleos_fisicos:
+        eje.axvline(nucleos_fisicos, color=TINTA_2, lw=1, ls=":")
+        eje.text(nucleos_fisicos, 0.98, f" {nucleos_fisicos} núcleos físicos", color=TINTA_2,
+                 fontsize=8, va="top", transform=eje.get_xaxis_transform())
+    eje.set_xticks(list(trabajo.index))
+    tope = max(float((trabajo.loc[1] / trabajo).max()), float((completo.loc[1] / completo).max())) * 1.5
+    eje.set_ylim(0, tope)
+    eje.set_xlabel("Procesos que preparan imágenes")
+    eje.set_ylabel("Speedup frente a 1 proceso")
+    eje.set_title("Escalado de la preparación de imágenes en el CPU")
+    figura.tight_layout()
+    figura.savefig(destino / "escalado_preparacion.png")
+    plt.close(figura)
 
 
 def etiqueta_barra(eje, barras, valores, formato, extra=None) -> None:
@@ -182,14 +255,14 @@ def figura_speedup(speedup: pd.DataFrame, destino: Path) -> None:
     if datos.empty:
         return
     fases = ["Entrenamiento", "Prueba", "Pipeline completo"]
-    objetivos = [o for o in ("gpu_directo", "gpu_optimizado") if o in set(datos["objetivo"])]
-    figura, eje = plt.subplots(figsize=(8, 3.4))
-    alto = 0.36
+    objetivos = [o for o in ("gpu_directo", "gpu_optimizado", "gpu_numba") if o in set(datos["objetivo"])]
+    figura, eje = plt.subplots(figsize=(8, 1.2 * len(objetivos) + 1.0))
+    alto = 0.8 / len(objetivos)
     base = np.arange(len(fases))[::-1]
     for i, objetivo in enumerate(objetivos):
         valores = [datos.loc[(datos["fase"] == f) & (datos["objetivo"] == objetivo), "speedup"].iloc[0]
                    for f in fases]
-        barras = eje.barh(base + (0.5 - i) * (alto + 0.04), valores, height=alto,
+        barras = eje.barh(base + ((len(objetivos) - 1) / 2 - i) * alto, valores, height=alto * 0.9,
                           color=COLORES[objetivo], label=NOMBRES[objetivo])
         etiqueta_barra(eje, barras, valores, "{:.1f}x")
     limite = speedup.loc[speedup["fase"] == "Límite de Amdahl", "speedup"]
@@ -202,15 +275,15 @@ def figura_speedup(speedup: pd.DataFrame, destino: Path) -> None:
     if not limite.empty:
         eje.text(0.99, 0.02, f"Límite de Amdahl del pipeline: {limite.iloc[0]:.1f}x",
                  transform=eje.transAxes, ha="right", va="bottom", color=TINTA_2, fontsize=9)
-    eje.legend(loc="upper right", ncols=2, bbox_to_anchor=(1, 1.16))
+    eje.legend(loc="upper center", ncols=len(objetivos), bbox_to_anchor=(0.5, -0.22))
     figura.tight_layout()
     figura.savefig(destino / "speedup.png")
     plt.close(figura)
 
 
 def figura_pipeline(total: pd.DataFrame, destino: Path) -> None:
-    figura, eje = plt.subplots(figsize=(10, 2.9))
-    objetivos = [o for o in NOMBRES if o in total.index]
+    objetivos = [o for o in NOMBRES_PIPELINE if o in total.index]
+    figura, eje = plt.subplots(figsize=(10, 0.75 * len(objetivos) + 1.4))
     posiciones = np.arange(len(objetivos))[::-1]
     izquierda = np.zeros(len(objetivos))
     for fase, color in COLORES_FASE.items():
@@ -221,12 +294,12 @@ def figura_pipeline(total: pd.DataFrame, destino: Path) -> None:
     for posicion, valor in zip(posiciones, izquierda):
         eje.annotate(f"{valor:.1f} s", (valor, posicion), xytext=(4, 0), textcoords="offset points",
                      va="center", color=TINTA, fontsize=9)
-    eje.set_yticks(posiciones, [NOMBRES[o] for o in objetivos])
+    eje.set_yticks(posiciones, [NOMBRES_PIPELINE[o] for o in objetivos])
     eje.set_xlabel("Segundos, media de las corridas")
     eje.set_title("Composición del tiempo total del pipeline")
     eje.grid(axis="y", visible=False)
     eje.set_xlim(0, izquierda.max() * 1.12)
-    eje.legend(loc="upper center", ncols=5, bbox_to_anchor=(0.5, -0.3))
+    eje.legend(loc="upper center", ncols=5, bbox_to_anchor=(0.5, -0.45 + 0.04 * len(objetivos)))
     figura.tight_layout()
     figura.savefig(destino / "pipeline_composicion.png")
     plt.close(figura)
@@ -271,12 +344,17 @@ def figura_epocas(entr: pd.DataFrame, destino: Path) -> None:
     plt.close(figura)
 
 
-def bloques_fase(fases: pd.DataFrame) -> list[tuple[str, float, float]]:
-    """Une corridas consecutivas de la misma fase para rotular la línea de tiempo."""
+def bloques_fase(fases: pd.DataFrame, agrupar_gpu: bool = False) -> list[tuple[str, float, float]]:
+    """Une corridas consecutivas de la misma fase para rotular la línea de tiempo.
+    Con agrupar_gpu las variantes de GPU forman un solo bloque, útil en la vista completa."""
     bloques = []
     for fila in fases.itertuples():
-        nombre = "Preparación" if fila.fase == "preparacion" else (
-            "Transferencia" if fila.fase == "transferencia" else NOMBRES.get(fila.objetivo, fila.objetivo))
+        if agrupar_gpu and fila.fase == "entrenamiento" and str(fila.objetivo).startswith("gpu"):
+            fila = fila._replace(objetivo="gpu")
+        etiquetas = {"preparacion": "Preparación", "arranque_pool": "Preparación",
+                     "almacenamiento": "Almacenamiento",
+                     "transferencia": "Transferencia"}
+        nombre = etiquetas.get(fila.fase, {**NOMBRES, "gpu": "GPU"}.get(fila.objetivo, fila.objetivo))
         if bloques and bloques[-1][0] == nombre:
             bloques[-1] = (nombre, bloques[-1][1], fila.t_fin)
         else:
@@ -301,7 +379,7 @@ def figura_monitor(destino: Path, origen: Path, fases: pd.DataFrame) -> None:
     cpu = pd.read_csv(origen / "monitor_cpu.csv")
     if cpu.empty or fases.empty:
         return
-    bloques = bloques_fase(fases)
+    bloques = bloques_fase(fases, agrupar_gpu=True)
     t0 = bloques[0][1]
     minutos = (cpu["t"] - t0) / 60
     nucleos = [c for c in cpu.columns if c.startswith("nucleo_")]
@@ -334,7 +412,7 @@ def figura_monitor(destino: Path, origen: Path, fases: pd.DataFrame) -> None:
     gpu_fases = fases[(fases["fase"] == "entrenamiento") & fases["objetivo"].str.startswith("gpu")]
     if not gpu_fases.empty:
         ventana = (gpu_fases["t_inicio"].min() - 20, gpu_fases["t_fin"].max() + 10)
-        dibujar_gpu(gpu, bloques, t0, destino / "uso_gpu_detalle.png", ventana)
+        dibujar_gpu(gpu, bloques_fase(fases), t0, destino / "uso_gpu_detalle.png", ventana)
 
 
 def dibujar_gpu(gpu: pd.DataFrame, bloques, t0: float, archivo: Path, ventana) -> None:
@@ -374,16 +452,19 @@ def main() -> None:
     estilo()
 
     prep = pd.read_csv(origen / "corridas_preparacion.csv")
+    alm = pd.read_csv(origen / "corridas_almacenamiento.csv")
+    sistema = json.loads((origen / "sistema.json").read_text(encoding="utf-8"))
     entr = pd.read_csv(origen / "corridas_entrenamiento.csv")
     trans_path = origen / "transferencias.csv"
     trans = pd.read_csv(trans_path) if trans_path.stat().st_size > 2 else pd.DataFrame(columns=["memoria", "segundos"])
     epocas = pd.read_csv(origen / "epocas.csv")
     fases = pd.read_csv(origen / "fases.csv")
 
-    tiempos = tabla_tiempos(prep, trans, entr)
-    total = totales(prep, entr)
-    speedup = tabla_speedup(entr, total)
-    revision = consistencia(prep, entr)
+    tiempos = tabla_tiempos(prep, alm, trans, entr)
+    total = totales(prep, alm, entr)
+    speedup = tabla_speedup(prep, entr, total)
+    revision = consistencia(prep, entr, sistema["configuracion"].get("huella_datos"))
+    revision["procesos_mas_rapidos"] = mejores_workers(prep)
 
     tiempos.to_csv(origen / "tabla_tiempos.csv", index=False)
     total.to_csv(origen / "tabla_pipeline.csv")
@@ -399,6 +480,7 @@ def main() -> None:
     figura_epocas(entr, destino)
     figura_exactitud(epocas, destino)
     figura_monitor(destino, origen, fases)
+    figura_escalado(prep, sistema["sistema"].get("nucleos_fisicos"), destino)
 
     pd.set_option("display.width", 140)
     print(tiempos[["fase", "objetivo", "media_s", "desv_s", "cv_pct", "n"]].round(3).to_string(index=False))

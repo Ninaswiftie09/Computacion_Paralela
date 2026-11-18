@@ -1,65 +1,90 @@
 """
-gpu_training.py  --  Integrante 2: Implementación con CUDA
-Proyecto 3 (CC3069): acelerar con GPU el Lab 3 ASL (Data Science).
+gpu_training.py: entrenamiento del modelo del Lab 3 en GPU con CUDA (PyTorch).
+Proyecto 3 (CC3069): acelerar con GPU el Lab 3 ASL de Data Science.
 
-Separación del pipeline (40 pts de la nota):
-  * CPU (Integrante 1, cpu_pipeline.py): leer JPG, decodificar, Resize 64x64, split 70/15/15
-    -> guarda  results/asl_prepared.npz
-  * GPU (este archivo): SOLO el entrenamiento/evaluación de CNN2.
+Separación del pipeline:
+  CPU (cpu_pipeline.py): leer JPG, decodificar, redimensionar a 64x64, normalizar entre 0 y 1
+    y dividir en 70/15/15. Guarda results/asl_prepared.npz.
+  GPU (este archivo): solo el entrenamiento y la evaluación del modelo.
 
-CONTRATO DE DATOS (lo que debe producir cpu_pipeline.py):
-  npz con  X_train, X_val, X_test : uint8  (N, 64, 64, 3)   <- ya redimensionadas (RGB)
-           y_train, y_val, y_test : int64  (N,)
-           clases                  : array de 29 nombres (opcional)
-  Si en cambio entrega float32 (N, 3, 64, 64) ya normalizado, también funciona.
-  La normalización (x/255 - 0.5)/0.5 de uint8 se aplica aquí, en el dispositivo, igual que
-  transforms.Normalize(mean=.5, std=.5) del notebook.
+Contrato de datos del NPZ:
+  X_train, X_val, X_test: float32 (N, 3, 64, 64) con valores entre 0 y 1, o uint8 (N, 64, 64, 3).
+  y_train, y_val, y_test: int64 (N,).
+  Si llega uint8, la división entre 255 se aplica aquí, igual que en el Lab 3.
 
-MODELO Y CONFIG = notebook Lab 3: CNN2 (BatchNorm+Dropout), CrossEntropy, Adam lr=1e-3,
-  10 épocas, batch 64, seed 42, validación en cada época.
+Modelo: traducción a PyTorch de build_cnn_improved de src/model_training.py (Lab 3, Keras).
+  Cada bloque tiene dos Conv2D 3x3 sin sesgo con BatchNormalization y ReLU, y un MaxPooling 2x2.
+  Después siguen GlobalAveragePooling, Dropout y una capa densa de 29 salidas.
+  Se copian los valores por defecto de Keras: pesos Glorot uniforme, BatchNorm con eps 1e-3
+  y momentum 0.99 (0.01 en PyTorch), y Adam con eps 1e-7.
+  TensorFlow 2.11 en adelante no usa la GPU en Windows nativo, por eso se tradujo a PyTorch.
 
 Modos:
-  directo    : port literal del notebook (DataLoader en CPU, .to(device) por lote, .item()).
-  optimizado : dataset residente en VRAM, sin sincronizaciones por lote (+ --amp opcional).
+  directo    : DataLoader en CPU, copia .to(device) por lote y .item() por lote.
+  optimizado : conjunto completo residente en VRAM, sin sincronizaciones por lote (--amp opcional).
 
 Uso:
-  python gpu_training.py --check
-  python gpu_training.py --modo directo     --runs 5
-  python gpu_training.py --modo optimizado  --runs 5
-  python gpu_training.py --modo optimizado  --runs 5 --amp     # extra (cambia precisión)
-  python gpu_training.py --sintetico --runs 1 --device cpu --epochs 1   # prueba de humo
+  python -m src.gpu_training --check
+  python -m src.gpu_training --modo directo    --runs 5
+  python -m src.gpu_training --modo optimizado --runs 5
+  python -m src.gpu_training --sintetico --runs 1 --device cpu --epochs 1   # prueba de humo
 """
-import argparse, json, os, statistics, subprocess, time
+import argparse, json, statistics, time
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-HP = dict(n_clases=29, epochs=10, batch_size=64, lr=1e-3, seed=42, eval_batch=512)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# Configuraciones de CNN_IMPROVED_CONFIGS en src/model_training.py.
+CNN_IMPROVED = {
+    "cnn_improved_a": dict(filters=(24, 48, 96), dropout=0.35, lr=1e-3),
+    "cnn_improved_b": dict(filters=(32, 64, 128), dropout=0.45, lr=5e-4),
+}
+# tune_keras_family del Lab 3 eligió cnn_improved_a (results/keras_referencia/ajuste_cnn_improved.csv).
+CONFIG = "cnn_improved_a"
+HP = dict(n_clases=29, epochs=10, batch_size=64, lr=CNN_IMPROVED[CONFIG]["lr"], seed=42,
+          eval_batch=512, config=CONFIG)
 
 
 # ======================================================================
-# MODELO: CNN2 copiada tal cual del notebook
+# MODELO: build_cnn_improved del Lab 3 traducido a PyTorch
 # ======================================================================
-class CNN2(nn.Module):
-    def __init__(self, n_clases=29):
+class CNNMejorada(nn.Module):
+    def __init__(self, filters=(32, 64, 128), dropout=0.45, n_clases=29):
         super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(),
-            nn.Conv2d(32, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(2),
-            nn.Conv2d(32, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(),
-            nn.Conv2d(64, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(2),
-            nn.Conv2d(64, 128, 3, padding=1), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(2),
-        )
+        capas, entrada = [], 3
+        for salida in filters:
+            capas += [
+                nn.Conv2d(entrada, salida, 3, padding=1, bias=False),
+                nn.BatchNorm2d(salida, eps=1e-3, momentum=0.01), nn.ReLU(),
+                nn.Conv2d(salida, salida, 3, padding=1, bias=False),
+                nn.BatchNorm2d(salida, eps=1e-3, momentum=0.01), nn.ReLU(),
+                nn.MaxPool2d(2),
+            ]
+            entrada = salida
+        self.conv = nn.Sequential(*capas)
         self.fc = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(128 * 8 * 8, 256), nn.BatchNorm1d(256), nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(256, n_clases),
+            nn.AdaptiveAvgPool2d(1), nn.Flatten(),
+            nn.Dropout(dropout),
+            nn.Linear(entrada, n_clases),
         )
+        for modulo in self.modules():
+            if isinstance(modulo, (nn.Conv2d, nn.Linear)):
+                nn.init.xavier_uniform_(modulo.weight)
+                if modulo.bias is not None:
+                    nn.init.zeros_(modulo.bias)
 
     def forward(self, x):
         return self.fc(self.conv(x))
+
+
+def crear_modelo(hp):
+    config = CNN_IMPROVED[hp["config"]]
+    return CNNMejorada(config["filters"], config["dropout"], hp["n_clases"])
 
 
 # ======================================================================
@@ -71,10 +96,10 @@ def _sync(dev):
 
 
 def normalizar(xb):
-    """uint8 NHWC -> float32 NCHW normalizado a [-1, 1] (equivale a ToTensor+Normalize .5/.5).
+    """uint8 NHWC -> float32 NCHW entre 0 y 1, igual que la división entre 255 del Lab 3.
     Si ya viene float32 se asume NCHW normalizado y no se toca."""
     if xb.dtype == torch.uint8:
-        return xb.permute(0, 3, 1, 2).float().div_(255.0).sub_(0.5).div_(0.5).contiguous()
+        return xb.permute(0, 3, 1, 2).float().div_(255.0).contiguous()
     return xb
 
 
@@ -87,12 +112,12 @@ def cargar_datos(path, sintetico=False, n_sint=2048):
         for k, n in (("train", n_sint), ("val", n_sint // 4), ("test", n_sint // 4)):
             d[f"X_{k}"], d[f"y_{k}"] = mk(n)
     else:
-        z = np.load(path, allow_pickle=True)
-        d = {k: z[k] for k in z.files if k.startswith(("X_", "y_"))}
+        with np.load(path, allow_pickle=True) as z:
+            d = {k: z[k] for k in z.files if k.startswith(("X_", "y_"))}
     return {k: torch.from_numpy(v) for k, v in d.items()}
 
 
-def verify_cuda():
+def verify_cuda(hp=HP):
     info = dict(torch=torch.__version__, cuda_disponible=torch.cuda.is_available(),
                 cuda_torch=torch.version.cuda, cudnn=torch.backends.cudnn.version())
     if info["cuda_disponible"]:
@@ -100,35 +125,12 @@ def verify_cuda():
         info.update(gpu=p.name, compute_capability=f"{p.major}.{p.minor}",
                     sms=p.multi_processor_count,
                     memoria_total_mb=round(p.total_memory / 2**20))
-        m = CNN2().cuda()                                   # prueba real: forward+backward de CNN2
-        out = m(torch.randn(8, 3, 64, 64, device="cuda"))
+        m = crear_modelo(hp).cuda()                       # prueba real: forward y backward
+        out = m(torch.rand(8, 3, 64, 64, device="cuda"))
         out.sum().backward()
         torch.cuda.synchronize()
-        info["cnn2_forward_backward_ok"] = tuple(out.shape) == (8, 29)
+        info["modelo_forward_backward_ok"] = tuple(out.shape) == (8, hp["n_clases"])
     return info
-
-
-class SmiLogger:
-    """Guarda uso de GPU/memoria cada 1 s (evidencia para el informe)."""
-    def __init__(self, path, enabled=True):
-        self.path, self.enabled, self.proc = path, enabled, None
-
-    def __enter__(self):
-        if not self.enabled:
-            return self
-        cmd = ["nvidia-smi", "--query-gpu=timestamp,utilization.gpu,utilization.memory,"
-               "memory.used,memory.total,temperature.gpu,power.draw",
-               "--format=csv", "-l", "1"]
-        try:
-            self.f = open(self.path, "w")
-            self.proc = subprocess.Popen(cmd, stdout=self.f)
-        except FileNotFoundError:
-            print("[aviso] nvidia-smi no encontrado; no se registra uso de GPU")
-        return self
-
-    def __exit__(self, *a):
-        if self.proc:
-            self.proc.terminate(); self.f.close()
 
 
 # ======================================================================
@@ -162,7 +164,7 @@ def eval_directo(model, loader, crit, dev):
 # ======================================================================
 # Un entrenamiento completo
 # ======================================================================
-def train_once(d, hp, dev, modo, amp):
+def train_once(d, hp, dev, modo, amp, modelo=None):
     torch.manual_seed(hp["seed"])
     cuda = dev.type == "cuda"
     if cuda:
@@ -172,9 +174,9 @@ def train_once(d, hp, dev, modo, amp):
 
     # ---- setup: modelo (+ dataset en VRAM en modo optimizado) -------------------
     _sync(dev); t_setup = time.perf_counter()
-    model = CNN2(hp["n_clases"]).to(dev)
-    opt = torch.optim.Adam(model.parameters(), lr=hp["lr"])
-    scaler = torch.cuda.amp.GradScaler(enabled=amp and cuda)
+    model = (modelo or crear_modelo)(hp).to(dev)
+    opt = torch.optim.Adam(model.parameters(), lr=hp["lr"], eps=1e-7)
+    scaler = torch.amp.GradScaler("cuda", enabled=amp and cuda)
     h2d = 0.0
     if modo == "optimizado":
         Xtr, ytr = d["X_train"].to(dev), d["y_train"].to(dev)
@@ -189,7 +191,7 @@ def train_once(d, hp, dev, modo, amp):
     if modo == "optimizado":
         h2d = setup_s                                   # aquí el setup es casi solo la copia
 
-    # ---- entrenamiento (incluye validación por época, igual que el notebook) ----
+    # ---- entrenamiento (incluye validación por época, igual que el Lab 3) -------
     ev, epoch_s, hist = [], [], []
     _sync(dev); t0 = time.perf_counter()
     for ep in range(hp["epochs"]):
@@ -224,7 +226,7 @@ def train_once(d, hp, dev, modo, amp):
             tl /= len(tr_loader.dataset)
             vl, va = eval_directo(model, va_loader, crit, dev)
         _sync(dev); epoch_s.append(time.perf_counter() - te0)
-        hist.append(dict(epoca=ep + 1, train_loss=tl, val_loss=vl, val_acc=va))
+        hist.append(dict(epoca=ep + 1, train_loss=tl, val_loss=vl, val_acc=va, segundos=epoch_s[-1]))
         print(f"    ép {ep+1:02d}/{hp['epochs']} train_loss={tl:.4f} val_loss={vl:.4f} "
               f"val_acc={va:.4f}  ({epoch_s[-1]:.2f}s)")
     _sync(dev); train_s = time.perf_counter() - t0
@@ -258,30 +260,34 @@ def resumir(res):
 
 # ======================================================================
 def main():
+    from .monitor import Monitor
+
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default="../results/asl_prepared.npz")
+    ap.add_argument("--data", default=str(PROJECT_ROOT / "results" / "asl_prepared.npz"))
     ap.add_argument("--modo", default="directo", choices=["directo", "optimizado"])
+    ap.add_argument("--config", default=CONFIG, choices=list(CNN_IMPROVED))
     ap.add_argument("--runs", type=int, default=5)
     ap.add_argument("--epochs", type=int, default=HP["epochs"])
     ap.add_argument("--amp", action="store_true", help="extra: precisión mixta (no es la config del Lab 3)")
     ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
     ap.add_argument("--sintetico", action="store_true", help="datos aleatorios, solo prueba de humo")
     ap.add_argument("--check", action="store_true")
-    ap.add_argument("--out", default="../results")
-    ap.add_argument("--evidence", default="../evidence")
+    ap.add_argument("--out", default=str(PROJECT_ROOT / "results"))
+    ap.add_argument("--evidence", default=str(PROJECT_ROOT / "evidence"))
     a = ap.parse_args()
-    os.makedirs(a.out, exist_ok=True); os.makedirs(a.evidence, exist_ok=True)
+    out, evidence = Path(a.out), Path(a.evidence)
+    out.mkdir(parents=True, exist_ok=True); evidence.mkdir(parents=True, exist_ok=True)
+    hp = {**HP, "epochs": a.epochs, "config": a.config, "lr": CNN_IMPROVED[a.config]["lr"]}
 
-    info = verify_cuda()
+    info = verify_cuda(hp)
     print(json.dumps(info, indent=2, ensure_ascii=False))
-    json.dump(info, open(f"{a.evidence}/cuda_check.json", "w"), indent=2)
+    (evidence / "cuda_check.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
     if a.check:
         return
     if a.device == "cuda" and not info["cuda_disponible"]:
         raise SystemExit("CUDA no disponible: revisa driver NVIDIA / modo de gráficos (laptop híbrida).")
     dev = torch.device(a.device)
     torch.backends.cudnn.benchmark = dev.type == "cuda"
-    hp = {**HP, "epochs": a.epochs}
 
     d = cargar_datos(a.data, a.sintetico)
     print({k: tuple(v.shape) for k, v in d.items()})
@@ -292,14 +298,14 @@ def main():
     train_once(chico, {**hp, "epochs": 1}, dev, a.modo, a.amp)
 
     res = []
-    with SmiLogger(f"{a.evidence}/nvidia_smi_{etiqueta}.csv", enabled=dev.type == "cuda"):
+    with Monitor(evidence, gpu=dev.type == "cuda", prefijo=f"monitor_{etiqueta}"):
         for r in range(a.runs):
             print(f"  Corrida {r+1}/{a.runs} [{etiqueta}]")
             res.append(train_once(d, hp, dev, a.modo, a.amp))
 
     summ = resumir(res)
     summ.update(hp=hp, modo=etiqueta, cuda=info, historial_ultima=res[-1]["historial"])
-    json.dump(summ, open(f"{a.out}/gpu_times_{etiqueta}.json", "w"), indent=2)
+    (out / f"gpu_times_{etiqueta}.json").write_text(json.dumps(summ, indent=2), encoding="utf-8")
     print(f"\n=== Resumen [{etiqueta}] (media ± desv, {a.runs} corridas) ===")
     for k in ("total_s", "train_s", "h2d_s", "compute_s", "epoch_mean_s", "test_s",
               "peak_mem_mb", "test_acc"):

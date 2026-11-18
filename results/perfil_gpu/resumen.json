@@ -1,0 +1,20 @@
+{
+  "estandar": {
+    "kernels_distintos": 50,
+    "lanzamientos_por_paso": 112.0,
+    "tiempo_gpu_por_paso_ms": 4.57465605
+  },
+  "numba": {
+    "kernels_distintos": 47,
+    "lanzamientos_por_paso": 110.0,
+    "tiempo_gpu_por_paso_ms": 4.567061100000001
+  },
+  "gpu": {
+    "nombre": "NVIDIA GeForce RTX 4080 Laptop GPU",
+    "sms": 58,
+    "hilos_max_por_sm": 1536,
+    "warp": 32,
+    "pasos_perfilados": 20,
+    "lote": 64
+  }
+}

@@ -1,10 +1,27 @@
 fase,objetivo,speedup
-Entrenamiento,gpu_directo,19.13533319368225
-Prueba,gpu_directo,16.924750556990535
-Pipeline completo,gpu_directo,5.080443692505239
-Pipeline según Amdahl,gpu_directo,5.082052999843028
-Entrenamiento,gpu_optimizado,21.92152860429672
-Prueba,gpu_optimizado,16.151913882361878
-Pipeline completo,gpu_optimizado,5.222139306833643
-Pipeline según Amdahl,gpu_optimizado,5.231724355451996
-Límite de Amdahl,cualquiera,6.558235742037616
+Preparación de imágenes,cpu_2,2.013005198869237
+Preparación con arranque del pool,cpu_2,1.7503262067766463
+Preparación de imágenes,cpu_4,2.7996006810986853
+Preparación con arranque del pool,cpu_4,2.286976441387203
+Preparación de imágenes,cpu_8,4.19752404478579
+Preparación con arranque del pool,cpu_8,2.8430128957721883
+Preparación de imágenes,cpu_16,7.02463231948899
+Preparación con arranque del pool,cpu_16,2.594507908933098
+Preparación de imágenes,cpu_24,5.906690858774392
+Preparación con arranque del pool,cpu_24,1.8947683925523835
+Preparación de imágenes,cpu_32,5.678754485839106
+Preparación con arranque del pool,cpu_32,1.3665178388571733
+Entrenamiento,gpu_directo,13.723246234851853
+Prueba,gpu_directo,14.44416209725655
+Pipeline completo,gpu_directo,3.2145963970705584
+Pipeline según Amdahl,gpu_directo,3.214499356879099
+Entrenamiento,gpu_numba,12.14019988353888
+Prueba,gpu_numba,17.728187000660835
+Pipeline completo,gpu_numba,3.1405241228408363
+Pipeline según Amdahl,gpu_numba,3.14316277557731
+Entrenamiento,gpu_optimizado,15.268298176024867
+Prueba,gpu_optimizado,17.534225893679405
+Pipeline completo,gpu_optimizado,3.269097980067859
+Pipeline según Amdahl,gpu_optimizado,3.272130967321986
+Pipeline completo,gpu_optimizado_paralelo,3.7395616764461175
+Límite de Amdahl,cualquiera,3.891888092297025

@@ -1,0 +1,49 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1795018716.452210    6432 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1795018718.895944    6432 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING:tensorflow:From C:\Users\rjbar\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\backend\common\global_state.py:82: The name tf.reset_default_graph is deprecated. Please use tf.compat.v1.reset_default_graph instead.
+
+WARNING:tensorflow:TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+Epoch 1/10
+191/191 - 18s - 94ms/step - accuracy: 0.2837 - loss: 2.5121 - val_accuracy: 0.0345 - val_loss: 4.6613
+Epoch 2/10
+191/191 - 17s - 86ms/step - accuracy: 0.6362 - loss: 1.3373 - val_accuracy: 0.0801 - val_loss: 3.5834
+Epoch 3/10
+191/191 - 16s - 86ms/step - accuracy: 0.8160 - loss: 0.7482 - val_accuracy: 0.6517 - val_loss: 1.2152
+Epoch 4/10
+191/191 - 17s - 87ms/step - accuracy: 0.8943 - loss: 0.4669 - val_accuracy: 0.7628 - val_loss: 0.7181
+Epoch 5/10
+191/191 - 17s - 88ms/step - accuracy: 0.9373 - loss: 0.3097 - val_accuracy: 0.8739 - val_loss: 0.4675
+Epoch 6/10
+191/191 - 17s - 88ms/step - accuracy: 0.9595 - loss: 0.2160 - val_accuracy: 0.9157 - val_loss: 0.2882
+Epoch 7/10
+191/191 - 19s - 97ms/step - accuracy: 0.9690 - loss: 0.1635 - val_accuracy: 0.9659 - val_loss: 0.1552
+Epoch 8/10
+191/191 - 20s - 107ms/step - accuracy: 0.9743 - loss: 0.1298 - val_accuracy: 0.9870 - val_loss: 0.0900
+Epoch 9/10
+191/191 - 21s - 108ms/step - accuracy: 0.9845 - loss: 0.0932 - val_accuracy: 0.9739 - val_loss: 0.1090
+Epoch 10/10
+191/191 - 20s - 106ms/step - accuracy: 0.9849 - loss: 0.0884 - val_accuracy: 0.9843 - val_loss: 0.0985
+Corrida 1: entrenamiento=181.5s test_acc=0.9805
+Epoch 1/10
+191/191 - 21s - 110ms/step - accuracy: 0.2837 - loss: 2.5121 - val_accuracy: 0.0345 - val_loss: 4.6613
+Epoch 2/10
+191/191 - 20s - 104ms/step - accuracy: 0.6362 - loss: 1.3373 - val_accuracy: 0.0801 - val_loss: 3.5834
+Epoch 3/10
+191/191 - 20s - 104ms/step - accuracy: 0.8160 - loss: 0.7482 - val_accuracy: 0.6517 - val_loss: 1.2152
+Epoch 4/10
+191/191 - 20s - 106ms/step - accuracy: 0.8943 - loss: 0.4669 - val_accuracy: 0.7628 - val_loss: 0.7181
+Epoch 5/10
+191/191 - 20s - 105ms/step - accuracy: 0.9373 - loss: 0.3097 - val_accuracy: 0.8739 - val_loss: 0.4675
+Epoch 6/10
+191/191 - 20s - 107ms/step - accuracy: 0.9595 - loss: 0.2160 - val_accuracy: 0.9157 - val_loss: 0.2882
+Epoch 7/10
+191/191 - 20s - 105ms/step - accuracy: 0.9690 - loss: 0.1635 - val_accuracy: 0.9659 - val_loss: 0.1552
+Epoch 8/10
+191/191 - 20s - 107ms/step - accuracy: 0.9743 - loss: 0.1298 - val_accuracy: 0.9870 - val_loss: 0.0900
+Epoch 9/10
+191/191 - 20s - 107ms/step - accuracy: 0.9845 - loss: 0.0932 - val_accuracy: 0.9739 - val_loss: 0.1090
+Epoch 10/10
+191/191 - 20s - 107ms/step - accuracy: 0.9849 - loss: 0.0884 - val_accuracy: 0.9843 - val_loss: 0.0985
+Corrida 2: entrenamiento=202.8s test_acc=0.9805

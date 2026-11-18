@@ -1,0 +1,25 @@
+{
+  "entorno": {
+    "tensorflow": "2.21.0",
+    "sistema": "Windows-11-10.0.26200-SP0",
+    "dispositivos": [
+      "/physical_device:CPU:0"
+    ],
+    "hilos_intra": 0,
+    "hilos_inter": 0
+  },
+  "epocas": 3,
+  "batch_size": 64,
+  "imagenes": 17400,
+  "mejor_config": {
+    "name": "cnn_improved_a",
+    "filters": [
+      24,
+      48,
+      96
+    ],
+    "dropout": 0.35,
+    "learning_rate": 0.001
+  },
+  "tiempo_total_s": 155.35713719999876
+}

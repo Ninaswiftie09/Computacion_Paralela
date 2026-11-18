@@ -24,28 +24,48 @@
       "batch_size": 64,
       "lr": 0.001,
       "seed": 42,
-      "eval_batch": 512
+      "eval_batch": 512,
+      "config": "cnn_improved_a"
+    },
+    "modelo": {
+      "filters": [
+        24,
+        48,
+        96
+      ],
+      "dropout": 0.35,
+      "lr": 0.001
     },
     "seed": 42,
     "image_size": 64,
     "images_per_class": 600,
+    "workers": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      24,
+      32
+    ],
     "prep_runs": 3,
     "runs": 5,
     "transfer_reps": 5,
     "targets": [
       "cpu",
       "gpu_directo",
-      "gpu_optimizado"
+      "gpu_optimizado",
+      "gpu_numba"
     ],
     "npz": "C:\\Users\\rjbar\\datasets\\p3_work\\asl_prepared.npz",
     "amp": false,
     "cudnn_benchmark_en_gpu": true,
-    "huella_datos": "dd227094d7f645a91757911ed4baa1716059caaa7579ef4997e8df56e5691b61",
+    "huella_datos": "6d96f56b2aeb8a3a181f1afe1df700272221db0523ef8668a2f2f019bc1c7986",
     "imagenes": {
       "train": 12180,
       "val": 2610,
       "test": 2610
     },
-    "duracion_total_s": 1885.4
+    "duracion_total_s": 1379.6
   }
 }

@@ -1,0 +1,58 @@
+{
+  "diferencia_maxima": {
+    "salida": 1.33514404296875e-05,
+    "grad_x": 5.7220458984375e-06,
+    "grad_peso": 1.1444091796875e-05,
+    "grad_sesgo": 2.86102294921875e-06
+  },
+  "lanzamientos": {
+    "forward matmul_tiles": [
+      [
+        2,
+        4
+      ],
+      [
+        16,
+        16
+      ]
+    ],
+    "forward sumar_sesgo": [
+      [
+        2,
+        4
+      ],
+      [
+        16,
+        16
+      ]
+    ],
+    "backward matmul_tiles grad_x": [
+      [
+        6,
+        4
+      ],
+      [
+        16,
+        16
+      ]
+    ],
+    "backward matmul_tiles grad_peso": [
+      [
+        6,
+        2
+      ],
+      [
+        16,
+        16
+      ]
+    ],
+    "backward sumar_columnas grad_sesgo": [
+      [
+        29
+      ],
+      [
+        256
+      ]
+    ]
+  }
+}
