@@ -1,0 +1,569 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[spanish,es-tabla,es-nodecimaldot]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx,amsmath,array,booktabs,ragged2e,float}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\urlstyle{same}
+\makeatletter
+\newcommand{\filastabla}[1]{\@@input #1 }
+\makeatother
+\graphicspath{{img/}{../../results/benchmark/figuras/}{../../evidence/capturas/}}
+\captionsetup{font=small,labelfont=bf,textfont=normalfont}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.2}
+\setlength{\emergencystretch}{2em}
+\setcounter{tocdepth}{1}
+\hypersetup{pageanchor=false}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\setlength{\parskip}{0pt}
+\vspace*{0.8cm}
+{\Large Universidad del Valle de Guatemala\par}
+\vspace{0.7cm}
+{\large Facultad de Ingeniería\par}
+\vspace{0.3cm}
+{\large Departamento de Ciencias de la Computación\par}
+\vspace{0.3cm}
+{\large CC3069 Computación Paralela y Distribuida, Semestre II 2026\par}
+\vspace{1cm}
+\includegraphics[width=0.22\textwidth]{logo_uvg.jpg}\par
+\vspace{1.1cm}
+{\LARGE\bfseries Mejorando algoritmos con CUDA\par}
+\vspace{0.6cm}
+{\Large\bfseries Reconocimiento de lenguaje de señas ASL acelerado con GPU\par}
+\vspace{0.6cm}
+{\large Proyecto 3\par}
+\vspace{1.6cm}
+\begin{minipage}{0.6\textwidth}
+\raggedright
+\textbf{Integrantes del equipo:}\par
+\begin{tabular}{@{}p{0.72\textwidth}l@{}}
+Roberto Barreda & \#23354 \\
+Nina Najera & \#231088 \\
+José Antón & \#221041 \\
+\end{tabular}\par
+\vspace{0.3cm}
+\textbf{Sección:} 20\par
+\end{minipage}\par
+\vfill
+Guatemala, Centroamérica\par
+\end{titlepage}
+
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\tableofcontents
+\clearpage
+
+\section*{Resumen}
+\addcontentsline{toc}{section}{Resumen}
+Se aceleró con CUDA el entrenamiento del clasificador de señas ASL del Laboratorio 3 de Data Science. La lectura y el ajuste de las imágenes se mantuvieron en el CPU, repartidos entre varios procesos, y el entrenamiento de la red convolucional se trasladó a la GPU. Cada variante se midió cinco veces con las mismas imágenes, el mismo modelo, diez épocas, lotes de 64 imágenes y la semilla 42, en una laptop con un Intel Core i9-13900HX y una NVIDIA GeForce RTX 4080 Laptop GPU.
+
+El entrenamiento pasó de 176.00 s en el CPU a 11.53 s en la GPU, una aceleración de 15.27x. El pipeline completo mejoró 3.27x, y 3.74x cuando las imágenes se prepararon con 8 procesos. La ganancia total es menor porque la selección, la preparación y el manejo de archivos siguen en el CPU y, según la ley de Amdahl, el pipeline no puede superar 3.89x mientras la preparación sea secuencial.
+
+\section{Introducción}
+El Laboratorio 3 de Data Science entrenó varios modelos para reconocer 29 señas del alfabeto ASL a partir de fotografías de manos. Todo el proceso corría en el CPU con TensorFlow. En este proyecto se tomó esa solución, se descompuso en sus operaciones principales y se separó en dos fases. La primera prepara las imágenes en el CPU. La segunda entrena la red neuronal en la GPU con CUDA.
+
+Para comparar en igualdad de condiciones, las dos versiones ejecutan el mismo código de entrenamiento y solo cambia el dispositivo. Se midió cada fase por separado, incluidas las copias de datos entre el CPU y la GPU, y se registró el uso de cada núcleo del CPU y de la GPU durante todas las corridas. Además, se escribió un kernel CUDA propio en Python con Numba y se registraron con un perfilador los kernels que lanza el entrenamiento, para mostrar cómo se reparte el trabajo entre hilos, bloques y grids.
+
+El código, los datos medidos y las figuras se encuentran en el repositorio:\\
+\url{https://github.com/Ninaswiftie09/Computacion_Paralela/tree/Proyecto3}.
+
+\section{Análisis de la solución secuencial}
+
+\subsection{Partes del programa}
+El Laboratorio 3 está organizado en módulos de Python y un notebook que los llama en orden. La Tabla \ref{tab:partes} resume la función de cada parte. El código del laboratorio se conservó sin cambios.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Partes del programa del Laboratorio 3.}
+\label{tab:partes}
+\begin{tabular}{L{4.2cm}L{11.2cm}}
+\toprule
+Archivo & Función \\
+\midrule
+download\_dataset.py & Descarga el dataset ASL Alphabet de Kaggle con kagglehub dentro de data/raw. \\
+utils.py & Define las rutas del proyecto y encuentra las carpetas de entrenamiento y de prueba. \\
+exploratory\_analysis.py & Cuenta imágenes por clase, revisa formato, resolución y archivos dañados y genera las figuras del análisis exploratorio. \\
+preprocess\_images.py & Selecciona 600 imágenes por clase con semilla 42 y las divide en 70 \% para entrenamiento, 15 \% para validación y 15 \% para prueba. \\
+model\_training.py & Construye y entrena con Keras una CNN base, una CNN mejorada y una red fully connected, y un clasificador HOG con SVM. Ajusta configuraciones con el conjunto de validación, entrena versiones con aumento de datos y evalúa con el conjunto de prueba. \\
+own\_images.py & Evalúa el mejor modelo con fotografías tomadas por el equipo. \\
+Lab3\_ASL.ipynb & Ejecuta las etapas anteriores en orden y presenta tablas, figuras y conclusiones. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El dataset tiene 87,000 imágenes JPEG de 200 por 200 píxeles en RGB, con 3,000 imágenes en cada una de las 29 clases. Con la submuestra de 600 imágenes por clase se trabajó con 17,400 imágenes, divididas en 12,180 para entrenamiento, 2,610 para validación y 2,610 para prueba.
+
+Para el proyecto se eligió la familia de CNN mejorada, que es la red que más cálculo concentra. Cuando se ejecutó el ajuste original del laboratorio, la configuración cnn\_improved\_a superó a cnn\_improved\_b con 78.28 \% de exactitud de validación contra 32.45 \%, así que se usó la primera. Tiene tres bloques con dos convoluciones de 3 por 3 sin sesgo, normalización por lotes, ReLU y max pooling de 2 por 2, con 24, 48 y 96 filtros. Después siguen un promedio global, dropout de 0.35 y una capa densa de 29 salidas. En total tiene 164,837 parámetros entrenables y usa Adam con tasa de aprendizaje de 0.001.
+
+\subsection{Operaciones identificadas}
+La Tabla \ref{tab:operaciones} recorre el programa desde que se reciben las imágenes hasta que se obtiene la predicción.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Operaciones principales del programa.}
+\label{tab:operaciones}
+\begin{tabular}{cL{4.3cm}L{10.4cm}}
+\toprule
+No. & Operación identificada & Descripción de su funcionamiento \\
+\midrule
+1 & Descarga del dataset & Obtiene los archivos de Kaggle y los guarda en disco. Se ejecuta una sola vez. \\
+2 & Selección y división & Lista los archivos de cada clase, los mezcla con semilla 42 y asigna cada imagen a entrenamiento, validación o prueba. \\
+3 & Lectura y decodificación & Abre cada archivo JPEG y lo convierte en una matriz de píxeles. \\
+4 & Conversión y redimensión & Convierte la imagen a RGB y la reduce de 200 por 200 a 64 por 64 píxeles con interpolación LANCZOS. \\
+5 & Normalización & Divide cada valor entre 255 para dejarlo entre 0 y 1. \\
+6 & Propagación hacia adelante & Aplica a cada lote las convoluciones, la normalización por lotes, ReLU, pooling, el promedio global y la capa densa. \\
+7 & Cálculo de la pérdida & Compara las salidas con las etiquetas mediante entropía cruzada. \\
+8 & Retropropagación & Calcula el gradiente de la pérdida respecto a cada parámetro, capa por capa y en orden inverso. \\
+9 & Actualización de pesos & Ajusta los 164,837 parámetros con el optimizador Adam. \\
+10 & Validación por época & Evalúa la red con el conjunto de validación al terminar cada época. \\
+11 & Evaluación final & Clasifica el conjunto de prueba y calcula exactitud, precisión, recall y F1. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Las operaciones que se repiten muchas veces aparecen en la Tabla \ref{tab:repetitivas}. Las cantidades corresponden a una preparación del conjunto y a un entrenamiento de diez épocas con lotes de 64 imágenes.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Operaciones repetitivas.}
+\label{tab:repetitivas}
+\begin{tabular}{L{4.6cm}L{5.4cm}L{5.4cm}}
+\toprule
+Operación repetitiva & Datos que procesa & Cantidad de repeticiones \\
+\midrule
+Lectura, decodificación y redimensión & Archivos JPEG de 200 por 200 píxeles & 17,400 imágenes por preparación \\
+Normalización de píxeles & 12,288 valores por imagen & 213,811,200 valores \\
+Propagación hacia adelante y retropropagación & Lotes de 64 imágenes de 3 por 64 por 64 & 191 lotes por época, 1,910 pasos en total \\
+Convoluciones de 3 por 3 & 6 capas convolucionales por paso & 11,460 convoluciones hacia adelante y otras tantas hacia atrás \\
+Actualización con Adam & 164,837 parámetros & 1,910 actualizaciones \\
+Validación & 2,610 imágenes & 10 evaluaciones, una por época \\
+Lanzamiento de kernels en la GPU & 112 kernels por paso de entrenamiento & 213,920 lanzamientos \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Medición del tiempo de ejecución secuencial}
+
+\subsection{Procedimiento}
+Todas las mediciones se hicieron en la misma laptop, descrita en la Tabla \ref{tab:equipo}. Antes de medir se conectó el cargador, se activó el modo de mayor rendimiento de Windows y se cerraron los programas que no se necesitaban. El script src/benchmark.py ejecuta todas las fases en orden y guarda los tiempos de cada corrida en archivos CSV. Mientras corre, un hilo registra cada segundo el uso de cada núcleo del CPU y el uso, la memoria, el reloj y la temperatura de la GPU.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Equipo y software de las mediciones.}
+\label{tab:equipo}
+\begin{tabular}{L{4cm}L{11.4cm}}
+\toprule
+Componente & Detalle \\
+\midrule
+CPU & Intel Core i9-13900HX, 24 núcleos (8 de alto rendimiento y 16 de eficiencia), 32 hilos \\
+Memoria & 15.7 GB de RAM \\
+GPU & NVIDIA GeForce RTX 4080 Laptop GPU, 12 GB, 58 multiprocesadores, capacidad de cómputo 8.9 \\
+Sistema y controlador & Windows 11, controlador NVIDIA 616.92 \\
+Software & Python 3.12.10, PyTorch 2.13.0 con CUDA 13.0, cuDNN 9.20, numba-cuda 0.30.4, TensorFlow 2.21 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Para el entrenamiento se hizo primero una época de calentamiento con 512 imágenes, que no se incluye en los resultados. Después se ejecutaron cinco entrenamientos completos de diez épocas por variante. Cada medición empieza y termina con una sincronización del dispositivo, para que el tiempo incluya todo el trabajo pendiente en la GPU.
+
+La versión secuencial de referencia se midió de dos formas. Primero se ejecutó sin cambios el ajuste del Laboratorio 3 para la familia de CNN mejorada, que lee los JPEG con tf.data en cada época. Después se entrenó cnn\_improved\_a durante diez épocas fijas a partir de los arreglos ya preparados, en Keras y en PyTorch, ambos en el CPU.
+
+\subsection{Resultados}
+La Tabla \ref{tab:secuencial} muestra los tiempos secuenciales. La versión en PyTorch tardó 176.00 s y la versión original en Keras 192.16 s para el mismo trabajo, así que la traducción conserva el costo del entrenamiento. Las dos redes tienen exactamente 164,837 parámetros entrenables y siguen la misma curva de aprendizaje. Las dos primeras épocas se quedan en 3.45 \% de exactitud de validación, por el retraso con el que la normalización por lotes ajusta sus estadísticas, y en la tercera época la exactitud sube a 65.2 \% en Keras y a 73.2 \% en PyTorch.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Tiempos de entrenamiento en el CPU. Los valores son media y desviación estándar.}
+\label{tab:secuencial}
+\begin{tabular}{L{4.4cm}L{2.4cm}ccrr}
+\toprule
+Versión & Datos & Épocas & Corridas & Tiempo (s) & Exactitud \\
+\midrule
+\filastabla{tablas/secuencial.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+La exactitud final de prueba fue de 98.05 \% en Keras y 94.44 \% en PyTorch. La diferencia viene de la última época y no del modelo. Sin un ajuste de la tasa de aprendizaje, la exactitud oscila de una época a otra, y en la novena época PyTorch llegó a 97.28 \% de validación. Cada versión es determinista en el CPU, así que repite el mismo resultado en todas sus corridas.
+
+\subsection{Factores que influyen en el rendimiento}
+La desviación del entrenamiento en el CPU fue de 6.63 s, un 3.8 \% de la media. El procesador es híbrido y Windows decide en qué núcleos corre cada hilo. Al final de la tercera corrida el planificador movió el entrenamiento a los núcleos de eficiencia durante unos 13 segundos, como se ve en la Figura \ref{fig:nucleos}. También influyen la temperatura, porque la laptop baja la frecuencia cuando se calienta, y el caché de archivos del sistema operativo. La primera preparación de imágenes tardó 17.07 s y las dos siguientes cerca de 12.7 s, porque los archivos ya estaban en memoria.
+
+Antes de este proyecto se había medido una red distinta en otra laptop. Esos tiempos no se usaron para calcular la aceleración porque venían de otro equipo y de un modelo que no pertenece al laboratorio.
+
+\section{Identificación de oportunidades de paralelización}
+Las operaciones se dividen en dos grupos según el tipo de trabajo.
+
+La lectura, la decodificación, la redimensión y la normalización tratan cada imagen por separado. Ninguna imagen depende de otra, así que el conjunto se puede repartir entre varios procesos del CPU. Son operaciones con muchas decisiones y accesos a disco, como decodificar el formato JPEG, que el CPU resuelve bien. Llevarlas a la GPU obligaría a copiar los archivos comprimidos y a usar bibliotecas especiales de decodificación, para imágenes que solo pesan unos kilobytes. Por eso se paralelizaron en el CPU con procesos independientes. Se usaron procesos y no hilos porque el intérprete de Python solo deja ejecutar código de Python a un hilo a la vez.
+
+La propagación hacia adelante, la retropropagación y la actualización de pesos repiten las mismas multiplicaciones y sumas sobre miles de valores. Una convolución calcula cada píxel de salida con la misma fórmula, y la normalización, ReLU y Adam aplican la misma operación a cada elemento de un tensor. Este trabajo encaja con la GPU, que ejecuta miles de hilos con la misma instrucción sobre datos distintos. Estas operaciones concentran casi todo el tiempo del pipeline secuencial, 176.00 s de 238.71 s, y son las que se trasladaron a la GPU.
+
+La selección del split, el guardado del archivo NPZ y la evaluación de métricas se dejaron en el CPU. Son operaciones de archivo o cálculos pequeños que no justifican una copia a la GPU.
+
+\section{Diseño del algoritmo paralelo}
+
+\subsection{Preparación de imágenes en el CPU}
+La función prepare\_arrays de src/cpu\_pipeline.py reparte las rutas de las imágenes en lotes de 200 y los envía a un grupo de procesos. Cada proceso abre sus imágenes, las convierte a RGB, las redimensiona y devuelve los píxeles como enteros de 8 bits. El proceso principal une los lotes y aplica una sola vez la división entre 255 y el cambio de orden a canales primero, que es el formato que espera PyTorch. El grupo de procesos se crea una vez y se reutiliza en las corridas, y su arranque se mide aparte. Se probaron 1, 2, 4, 8, 16, 24 y 32 procesos. Todas las variantes producen los mismos bytes, comprobados con una huella SHA-256.
+
+\subsection{Entrenamiento en la GPU}
+El entrenamiento se implementó con tres variantes. En el modo directo, cada lote se copia del CPU a la GPU al momento de usarlo y la pérdida se lee en cada paso, como en un programa de PyTorch típico. En el modo optimizado, el conjunto completo se copia una sola vez a la memoria de la GPU antes de entrenar, la mezcla de los lotes se hace en la GPU y la pérdida se acumula sin detener la GPU en cada paso. La tercera variante es el modo optimizado con la capa densa final calculada por kernels propios.
+
+Cada operación de la red se ejecuta como uno o varios kernels, y cada kernel define un grid de bloques de hilos. En PyTorch esa configuración la eligen cuDNN y cuBLAS según la forma de los tensores. Para conocerla, se registraron con torch.profiler veinte pasos de entrenamiento. Cada paso lanza 112 kernels y ocupa 4.57 ms de cálculo en la GPU. La Tabla \ref{tab:categorias} muestra cómo se reparte ese tiempo.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Kernels de un paso de entrenamiento por tipo de operación.}
+\label{tab:categorias}
+\begin{tabular}{L{7cm}rr}
+\toprule
+Tipo de operación & Lanzamientos por paso & Tiempo de GPU \\
+\midrule
+\filastabla{tablas/kernels_categoria.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+La Tabla \ref{tab:kernels} muestra el kernel más costoso de cada tipo con su configuración real. El pooling hacia atrás lanza un grid de 16 por 64 por 24 bloques de 256 hilos, que da 6,291,456 hilos, uno por cada valor de entrada de la primera capa (64 imágenes, 24 canales y 64 por 64 píxeles). Las operaciones elemento a elemento usan bloques de 128 hilos y miles de bloques, y alcanzan la ocupación completa. La normalización por lotes, en cambio, lanza un bloque de 512 hilos por canal. Con 24 canales son solo 24 bloques para 58 multiprocesadores, y la ocupación estimada queda en 14 \%. Ese kernel es el más costoso del paso, aunque procesa menos valores que el pooling.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Configuración de algunos kernels del entrenamiento. La ocupación es la estimación del perfilador.}
+\label{tab:kernels}
+\begin{tabular}{L{2.6cm}L{4.2cm}ccrrr}
+\toprule
+Tipo & Kernel & Grid & Bloque & Hilos & Registros & Ocupación \\
+\midrule
+\filastabla{tablas/kernels_ejemplo.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Las convoluciones usan algoritmos como Winograd y GEMM implícito, que transforman la convolución en multiplicaciones de matrices por mosaicos. cuDNN los ejecuta con los Tensor Cores en formato TF32, que es el comportamiento por defecto de PyTorch en esta GPU.
+
+\subsection{Kernel propio con Numba}
+Para escribir de forma explícita el reparto entre hilos, bloques y grids, la capa densa final se reemplazó por kernels propios en src/numba\_dense.py. La capa recibe 96 valores por imagen y produce 29. Su cálculo es $Y = XW^T + b$ hacia adelante, y $dX = dY\,W$, $dW = dY^T X$ y la suma de $dY$ por columnas hacia atrás.
+
+El kernel matmul\_tiles asigna a cada hilo un elemento de la matriz de salida. Los hilos se agrupan en bloques de 16 por 16 y el grid tiene tantos bloques como hagan falta para cubrir la salida. Cada bloque recorre la dimensión común en mosaicos de 16, copia cada mosaico a memoria compartida y sincroniza sus hilos antes de multiplicar. Así, cada valor se lee una vez de la memoria global por bloque. El kernel sumar\_columnas usa un bloque de 256 hilos por columna: cada hilo acumula varias filas y después el bloque suma los resultados en árbol dentro de la memoria compartida. La Tabla \ref{tab:numba} muestra los lanzamientos para un lote de 64 imágenes.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Lanzamientos de los kernels propios para un lote de 64 imágenes.}
+\label{tab:numba}
+\begin{tabular}{L{4.6cm}lccr}
+\toprule
+Cálculo & Kernel & Grid & Bloque & Hilos \\
+\midrule
+\filastabla{tablas/numba_lanzamientos.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los tensores de PyTorch se pasan a Numba sin copiarlos, mediante la interfaz de arreglos de CUDA, y los kernels se lanzan en el mismo stream que usa PyTorch para respetar el orden de ejecución. Comparados con PyTorch sobre datos aleatorios, los resultados difieren como máximo en $\input{tablas/numba_error.tex}$, que es el error de redondeo esperado en precisión simple.
+
+\section{Implementación con CUDA Python}
+
+\subsection{Separación del pipeline}
+El código separa las dos fases en archivos distintos. src/cpu\_pipeline.py prepara las imágenes en el CPU y guarda los arreglos en un archivo NPZ. src/gpu\_training.py carga esos arreglos y contiene el modelo, la configuración de CUDA y el ciclo de entrenamiento. Ningún archivo de la fase de preparación usa la GPU, y la fase de entrenamiento no lee imágenes. La Tabla \ref{tab:codigo} resume los archivos del proyecto.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Archivos del proyecto.}
+\label{tab:codigo}
+\begin{tabular}{L{4.2cm}L{2.2cm}L{9cm}}
+\toprule
+Archivo & Dispositivo & Función \\
+\midrule
+cpu\_pipeline.py & CPU & Selección, lectura, redimensión y normalización de las imágenes con uno o varios procesos. \\
+gpu\_training.py & GPU & Modelo cnn\_improved\_a traducido a PyTorch, verificación de CUDA y entrenamiento en los modos directo y optimizado. \\
+numba\_dense.py & GPU & Kernels propios de la capa densa escritos con Numba. \\
+cpu\_training.py & CPU & Entrenamiento de referencia en el CPU con el mismo código de gpu\_training.py. \\
+keras\_referencia.py & CPU & Medición del código original del Laboratorio 3 en Keras. \\
+benchmark.py & CPU y GPU & Ejecuta todas las fases con las mismas condiciones y registra tiempos y uso de recursos. \\
+benchmark\_report.py & Ninguno & Calcula promedios, aceleraciones y consistencia, y genera las figuras. \\
+gpu\_profile.py & GPU & Registra los kernels del entrenamiento y verifica los kernels propios. \\
+monitor.py & Ninguno & Registra cada segundo el uso del CPU por núcleo y el estado de la GPU. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Funciones y bibliotecas para usar la GPU}
+TensorFlow dejó de usar la GPU en Windows nativo desde la versión 2.11, y en esta laptop solo detecta el CPU. Por eso el modelo se tradujo a PyTorch capa por capa. Se copiaron los valores por defecto de Keras: inicialización Glorot uniforme, normalización por lotes con épsilon de 0.001 y momento de 0.99, y Adam con épsilon de $10^{-7}$.
+
+La configuración de CUDA se hace con las funciones de PyTorch. torch.cuda.is\_available y torch.cuda.get\_device\_properties comprueban que el entorno reconoce la GPU, y el script hace una pasada completa hacia adelante y hacia atrás como prueba. torch.device y el método .to mueven el modelo y los datos a la memoria de la GPU. torch.backends.cudnn.benchmark permite que cuDNN pruebe varios algoritmos de convolución y elija el más rápido para cada capa. pin\_memory reserva memoria fijada en el CPU para copias más rápidas. torch.cuda.synchronize y torch.cuda.Event permiten medir el tiempo de la GPU sin perder trabajo pendiente. torch.profiler, que usa CUPTI, registra los kernels con su grid y bloque.
+
+Los kernels propios usan numba-cuda, la versión de Numba que mantiene NVIDIA. Se escriben con el decorador cuda.jit y usan cuda.shared.array para la memoria compartida, cuda.syncthreads para sincronizar los hilos de un bloque, cuda.as\_cuda\_array para leer los tensores de PyTorch sin copiarlos y cuda.external\_stream para lanzarlos en el stream de PyTorch. Por debajo, PyTorch usa cuDNN para las convoluciones y la normalización, y cuBLAS para las multiplicaciones de matrices.
+
+\section{Resultados y análisis}
+
+\subsection{Tabla comparativa de tiempos}
+La Tabla \ref{tab:comparativa} reúne los tiempos de todas las fases. Las fases de preparación y de archivo son comunes a todas las variantes porque siempre se ejecutan en el CPU. El total del pipeline suma la selección, la preparación con un proceso, el guardado y la carga del NPZ, la configuración, el entrenamiento y la prueba.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Tiempos por fase en segundos. Los valores son media y desviación estándar de las corridas.}
+\label{tab:comparativa}
+\begin{tabular}{L{4.4cm}rrrr}
+\toprule
+Fase & CPU & GPU directo & GPU optimizado & GPU con Numba \\
+\midrule
+\filastabla{tablas/comparativa.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{tiempos_por_fase.png}
+\caption{Tiempo de entrenamiento y de prueba en cada dispositivo.}
+\label{fig:tiempos}
+\end{figure}
+
+\subsection{Costo de las transferencias entre CPU y GPU}
+La Tabla \ref{tab:transferencia} muestra el costo de copiar los arreglos completos, 815.8 MB, a la memoria de la GPU. La copia tarda menos de una décima de segundo, menos del 1 \% del entrenamiento en la GPU. En el modo directo, las copias de cada lote suman 0.851 s por entrenamiento, un 6.6 \% de su tiempo, y además obligan a la GPU a esperar al CPU en cada paso.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Copia del conjunto completo de la RAM a la memoria de la GPU.}
+\label{tab:transferencia}
+\begin{tabular}{lrrr}
+\toprule
+Memoria del CPU & Tamaño (MB) & Tiempo (s) & Velocidad (GB/s) \\
+\midrule
+\filastabla{tablas/transferencia.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Aceleración por fase}
+La aceleración de cada fase se calculó como el tiempo en el CPU dividido entre el tiempo en la GPU. La Tabla \ref{tab:speedup} y la Figura \ref{fig:speedup} muestran los resultados.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Aceleración (speedup) frente al CPU.}
+\label{tab:speedup}
+\begin{tabular}{L{5.5cm}rrr}
+\toprule
+Fase & GPU directo & GPU optimizado & GPU con Numba \\
+\midrule
+\filastabla{tablas/speedup.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{speedup.png}
+\caption{Aceleración de cada fase frente al CPU.}
+\label{fig:speedup}
+\end{figure}
+
+El modo optimizado fue el más rápido, con 15.27x en el entrenamiento. Frente al modo directo ganó 1.3 s porque no copia lotes ni detiene la GPU en cada paso, y la mediana de uso de la GPU subió de entre 80 y 84 \% en el modo directo a 99 \%. La variante con kernels de Numba fue más lenta que el modo optimizado, con 12.14x, aunque sus kernels ocupan menos del 0.3 \% del tiempo de cálculo. La diferencia viene del costo de lanzar cada kernel desde Python, que es mayor que el cálculo de una capa tan pequeña. Mientras Python prepara cada lanzamiento la GPU espera, y la mediana de su uso bajó a entre 51 y 91 \%.
+
+El modo optimizado tuvo una corrida mucho más lenta que las demás y el de Numba tuvo dos, y por eso su desviación es alta. En esas corridas el uso de la GPU bajó a entre 20 y 40 \% sin que bajara su reloj, lo que indica que la GPU esperaba trabajo y no que se hubiera calentado. Coincidieron con la toma de capturas de pantalla. Una de esas capturas muestra una época de 3.38 s, cuando las demás duran cerca de 1.0 s. Por eso la tabla incluye la aceleración con medianas, 17.61x para el modo optimizado.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Aceleración de la preparación paralela y del pipeline completo.}
+\label{tab:speedupextra}
+\begin{tabular}{L{11cm}r}
+\toprule
+Medida & Speedup \\
+\midrule
+\filastabla{tablas/speedup_extra.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{pipeline_composicion.png}
+\caption{Composición del tiempo total del pipeline.}
+\label{fig:pipeline}
+\end{figure}
+
+La Figura \ref{fig:pipeline} explica por qué el pipeline completo solo mejora 3.27x. Con la GPU, la configuración, el entrenamiento y la prueba suman 11.68 s, mientras la selección, la preparación y el manejo del NPZ suman 61.34 s en el CPU. Según la ley de Amdahl, si el entrenamiento fuera instantáneo el pipeline no pasaría de 3.89x. La preparación con 8 procesos baja el total a 63.83 s y la aceleración a 3.74x. Ahora la fase más larga es el guardado comprimido del NPZ, con 32.38 s.
+
+\subsection{Preparación de imágenes con varios núcleos}
+La Tabla \ref{tab:preparacion} y la Figura \ref{fig:escalado} muestran cómo escala la preparación. Solo con el trabajo, la aceleración llega a 7.02x con 16 procesos y después baja. Si se cuenta el arranque de los procesos, el mejor resultado es 2.84x con 8 procesos, porque cada proceso nuevo tarda en arrancar y cargar sus bibliotecas. El arranque pasa de 1.06 s con 2 procesos a 7.87 s con 32.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Preparación de las 17,400 imágenes según la cantidad de procesos.}
+\label{tab:preparacion}
+\begin{tabular}{crrrrr}
+\toprule
+Procesos & Arranque (s) & Trabajo (s) & ms por imagen & Speedup del trabajo & Speedup con arranque \\
+\midrule
+\filastabla{tablas/preparacion.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{escalado_preparacion.png}
+\caption{Aceleración de la preparación de imágenes según la cantidad de procesos.}
+\label{fig:escalado}
+\end{figure}
+
+La aceleración no llega a la ideal por tres razones. El procesador tiene 8 núcleos de alto rendimiento y 16 de eficiencia, que son más lentos, así que pasar de 8 a 16 procesos agrega núcleos que aportan menos. Con más de 24 procesos compiten dos procesos por núcleo físico. Además, el proceso principal une los lotes y normaliza los datos de forma secuencial.
+
+\subsection{Consistencia de los resultados}
+Las 21 preparaciones produjeron la misma huella SHA-256, y el NPZ cargado coincide con los datos preparados. Todas las variantes entrenaron exactamente con las mismas imágenes. La Tabla \ref{tab:exactitud} compara la exactitud.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Exactitud de prueba al final de la décima época y mejor exactitud de validación de cada corrida.}
+\label{tab:exactitud}
+\begin{tabular}{L{4.2cm}crrrr}
+\toprule
+Variante & Corridas & Media & Mínima & Máxima & Mejor validación \\
+\midrule
+\filastabla{tablas/exactitud.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+En el CPU las cinco corridas dieron el mismo resultado. En la GPU la exactitud final varía entre 89.58 \% y 99.43 \%. cuDNN elige algoritmos que no garantizan el mismo orden de las sumas, las convoluciones usan TF32, y el modo optimizado mezcla los lotes con un generador distinto. Esas diferencias pequeñas cambian la trayectoria del entrenamiento, y la última época cae en un punto distinto de la oscilación. La mejor exactitud de validación de cada corrida queda entre 96.28 \% y 98.84 \% en todas las variantes. La Figura \ref{fig:exactitud} muestra que las curvas siguen el mismo recorrido.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{exactitud_por_epoca.png}
+\caption{Exactitud de validación por época, promedio de las corridas.}
+\label{fig:exactitud}
+\end{figure}
+
+\subsection{Uso de recursos en cada fase}
+La Figura \ref{fig:nucleos} muestra el uso de cada uno de los 32 núcleos lógicos durante todo el benchmark. En la preparación con varios procesos se encienden los núcleos de forma progresiva. Durante el entrenamiento en el CPU, los 32 núcleos trabajan a la vez. Durante el entrenamiento en la GPU, el CPU baja a entre 15 y 25 \% y queda libre para otras tareas.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{uso_cpu_nucleos.png}
+\caption{Uso de cada núcleo lógico del CPU durante el benchmark.}
+\label{fig:nucleos}
+\end{figure}
+
+La Figura \ref{fig:gpu} muestra la GPU durante sus tres variantes. En el modo optimizado la mediana de uso es de 99 \%, que es la saturación de sus núcleos. La memoria llega a 1.9 GB de 12 GB, porque el conjunto de datos y el modelo son pequeños. Las capturas del Administrador de tareas y de nvidia-smi se encuentran en los anexos.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{uso_gpu_detalle.png}
+\caption{Uso de los núcleos y de la memoria de la GPU durante el entrenamiento en la GPU.}
+\label{fig:gpu}
+\end{figure}
+
+\section{Discusión técnica}
+
+\subsection{¿Por qué conviene procesar las imágenes en el CPU y delegar la matemática a la GPU?}
+Las dos fases tienen formas de trabajo distintas. Preparar una imagen implica abrir un archivo, decodificar el JPEG y redimensionarlo. La decodificación avanza byte por byte con muchas decisiones, y cada archivo es pequeño e independiente. Ese trabajo se reparte bien entre procesos del CPU, cada uno con su imagen, y con 16 procesos la preparación fue 7.02 veces más rápida. En la GPU habría que copiar los archivos comprimidos y usar bibliotecas especiales de decodificación, y los hilos no avanzarían juntos porque cada imagen toma decisiones distintas.
+
+La matemática de la red es lo contrario. Una convolución aplica la misma multiplicación y suma a millones de valores, y la normalización, ReLU y Adam repiten la misma operación por elemento. La GPU ejecuta esos cálculos con miles de hilos al mismo tiempo, y el entrenamiento fue 15.27 veces más rápido. Mientras la GPU entrena, el CPU queda libre cerca de 80 \%. Así cada procesador hace el tipo de trabajo para el que está diseñado y los datos cruzan entre ellos una sola vez.
+
+\subsection{¿Cómo permitió CUDA reducir o cambiar el tiempo de procesamiento?}
+CUDA redujo el entrenamiento de 176.00 s a 11.53 s. Cada paso de entrenamiento lanza 112 kernels que se reparten en grids de hasta millones de hilos, y su cálculo en la GPU tarda 4.57 ms. Las convoluciones usan algoritmos por mosaicos que aprovechan la memoria compartida y los Tensor Cores. La prueba también se aceleró 17.53x.
+
+CUDA también cambió dónde se gasta el tiempo. En el CPU, el entrenamiento ocupaba el 74 \% del pipeline. Con la GPU ocupa el 16 \%, y la parte más larga pasó a ser el manejo de archivos en el CPU. Por eso el pipeline completo solo mejoró 3.27x. El modo optimizado mostró que la forma de alimentar la GPU también importa: guardar los datos en su memoria y evitar las esperas en cada paso dio 1.3 s menos que el modo directo.
+
+\subsection{¿Qué factores justifican o limitan el uso de CUDA?}
+Lo justifican la cantidad de cálculo repetido, que el entrenamiento recorre los datos diez veces y que todo el conjunto cabe en la memoria de la GPU. La copia de los datos tarda 0.094 s y se paga una sola vez.
+
+Lo limitan varios factores. El modelo y los lotes son pequeños, así que muchos kernels no llenan la GPU, como la normalización por lotes con 24 bloques y 14 \% de ocupación. Cada kernel tiene un costo de lanzamiento, y en la variante con Numba ese costo superó al cálculo de la capa. Las partes que siguen en el CPU limitan la ganancia total según la ley de Amdahl. Los resultados en la GPU no son idénticos entre corridas. En una laptop con Windows, la GPU comparte recursos con la pantalla y otros programas, y la temperatura llegó a 87 °C. Por último, TensorFlow no usa la GPU en Windows nativo, así que hubo que traducir el modelo a PyTorch.
+
+\section{Conclusiones}
+El entrenamiento de la CNN del Laboratorio 3 fue 15.27 veces más rápido en la GPU que en el CPU, con los mismos datos, modelo y configuración.
+
+El pipeline completo mejoró 3.27x, y 3.74x con la preparación en paralelo. La ganancia total depende de las fases que siguen en el CPU, como predice la ley de Amdahl.
+
+La preparación de imágenes se acelera en el CPU repartiendo los archivos entre procesos, hasta 7.02x con 16 procesos. Su límite viene del arranque de los procesos y de los núcleos de eficiencia del procesador.
+
+Mantener los datos en la memoria de la GPU y evitar sincronizaciones por lote subió la mediana de su uso de entre 80 y 84 \% a 99 \% y redujo el tiempo de entrenamiento.
+
+Un kernel propio permite controlar el reparto entre hilos, bloques y grids, pero en una capa pequeña el costo de lanzarlo desde Python supera la ganancia. Las bibliotecas como cuDNN siguen siendo la opción más rápida para las operaciones estándar.
+
+\section{Recomendaciones}
+Guardar el NPZ sin compresión o en enteros de 8 bits para reducir los 32.38 s de guardado, que hoy son la fase más larga del pipeline acelerado.
+
+Usar lotes más grandes o precisión mixta para aprovechar mejor la GPU, y comprobar después que la exactitud se mantiene.
+
+Agregar al entrenamiento la reducción de la tasa de aprendizaje y la detención temprana del Laboratorio 3, y guardar el mejor modelo por validación, para que la exactitud final no dependa de la oscilación de la última época.
+
+Evitar tomar capturas o abrir monitores gráficos durante las mediciones, o hacerlo en una corrida aparte, porque interrumpen a la GPU.
+
+\section*{Referencias}
+\addcontentsline{toc}{section}{Referencias}
+Amdahl, G. M. (1967). Validity of the single processor approach to achieving large scale computing capabilities. AFIPS Spring Joint Computer Conference, 483-485.
+
+Nagaraj, A. (2018). ASL Alphabet. Kaggle. \url{https://www.kaggle.com/datasets/grassknoted/asl-alphabet}
+
+NVIDIA. (2026). CUDA C++ Programming Guide. \url{https://docs.nvidia.com/cuda/cuda-c-programming-guide/}
+
+NVIDIA. (2026). Numba CUDA. \url{https://nvidia.github.io/numba-cuda/}
+
+PyTorch. (2026). CUDA semantics. \url{https://pytorch.org/docs/stable/notes/cuda.html}
+
+PyTorch. (2026). torch.profiler. \url{https://pytorch.org/docs/stable/profiler.html}
+
+TensorFlow. (2026). Install TensorFlow with pip. \url{https://www.tensorflow.org/install/pip}
+
+\clearpage
+\section*{Anexos}
+\addcontentsline{toc}{section}{Anexos}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{cpu_entrenamiento_32_hilos.png}
+\caption{Administrador de tareas durante el entrenamiento en el CPU. Los 32 procesadores lógicos trabajan a la vez.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{cpu_preparacion_paralela.png}
+\caption{Administrador de tareas al terminar la preparación con varios procesos. La historia de 60 segundos muestra la carga en los distintos núcleos y la terminal muestra los tiempos de la preparación.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{nvidia_smi_durante_captura.png}
+\caption{nvidia-smi durante el entrenamiento en la GPU. python.exe aparece como proceso de cómputo y usa 1.9 GB de memoria de la GPU. Se tomó durante la pausa que provocó la captura anterior, por eso el uso marca 21 \%.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{gpu_administrador_vista_3d.png}
+\caption{Administrador de tareas en la vista de GPU. Las gráficas 3D, Copy y video no muestran el trabajo de CUDA, que corre en el motor de cómputo. La terminal muestra la época de 3.38 s que coincidió con la captura.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{epocas_por_corrida.png}
+\caption{Tiempo promedio por época en cada corrida. Las corridas lentas en la GPU coinciden con la toma de capturas.}
+\end{figure}
+
+\end{document}

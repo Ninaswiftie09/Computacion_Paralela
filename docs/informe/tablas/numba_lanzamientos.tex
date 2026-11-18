@@ -1,0 +1,5 @@
+Forward, $Y = XW^T$ & \texttt{matmul\_tiles} & (2,4) & (16,16) & 2,048 \\
+Forward, suma del sesgo & \texttt{sumar\_sesgo} & (2,4) & (16,16) & 2,048 \\
+Backward, $dX = dY\,W$ & \texttt{matmul\_tiles} & (6,4) & (16,16) & 6,144 \\
+Backward, $dW = dY^T X$ & \texttt{matmul\_tiles} & (6,2) & (16,16) & 3,072 \\
+Backward, $db$ por columnas & \texttt{sumar\_columnas} & (29) & (256) & 7,424 \\

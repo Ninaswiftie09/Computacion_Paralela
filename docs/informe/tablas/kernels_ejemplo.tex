@@ -1,0 +1,9 @@
+Normalización por lotes & \texttt{bn\_bw\_1C11\_kernel\_new} & (24,1,1) & (512,1,1) & 12,288 & 40 & 14 \% \\
+Convolución & \texttt{wgrad\_alg0\_engine} & (4,1,512) & (8,8,1) & 131,072 & 94 & 42 \% \\
+Operaciones elemento a elemento & \texttt{elementwise\_kernel} & (6144,1,1) & (128,1,1) & 786,432 & 40 & 100 \% \\
+Pooling & \texttt{max\_pool\_backward\_nchw} & (16,64,24) & (256,1,1) & 6,291,456 & 40 & 100 \% \\
+Cambio de formato NCHW y NHWC & \texttt{nchwToNhwcKernel} & (32,2,64) & (256,1,1) & 1,048,576 & 32 & 100 \% \\
+Optimizador Adam & \texttt{multi\_tensor\_apply\_kernel} & (21,1,1) & (512,1,1) & 10,752 & 37 & 12 \% \\
+Reducciones & \texttt{reduce\_kernel} & (384,1,1) & (32,16,1) & 196,608 & 26 & 100 \% \\
+Kernel propio de Numba & \texttt{matmul\_tiles} & (2,4,1) & (16,16,1) & 2,048 & 40 & 2 \% \\
+Kernel propio de Numba & \texttt{matmul\_tiles} & (6,2,1) & (16,16,1) & 3,072 & 40 & 3 \% \\

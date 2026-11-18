@@ -23,3 +23,9 @@ Thumbs.db
 data/raw/*
 data/processed/*
 /results/*.npz
+
+# Archivos auxiliares de LaTeX
+docs/informe/*.aux
+docs/informe/*.log
+docs/informe/*.out
+docs/informe/*.toc
