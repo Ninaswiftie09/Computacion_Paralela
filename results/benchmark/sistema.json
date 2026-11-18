@@ -1,0 +1,51 @@
+{
+  "sistema": {
+    "sistema": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "nucleos_fisicos": 24,
+    "nucleos_logicos": 32,
+    "ram_gb": 15.7,
+    "torch": "2.13.0+cu130",
+    "hilos_torch": 24,
+    "cuda_disponible": true,
+    "gpu": "NVIDIA GeForce RTX 4080 Laptop GPU",
+    "vram_mb": 12282,
+    "sms": 58,
+    "compute_capability": "8.9",
+    "cuda_torch": "13.0",
+    "cudnn": 92000,
+    "driver_nvidia": "616.92"
+  },
+  "configuracion": {
+    "hp": {
+      "n_clases": 29,
+      "epochs": 10,
+      "batch_size": 64,
+      "lr": 0.001,
+      "seed": 42,
+      "eval_batch": 512
+    },
+    "seed": 42,
+    "image_size": 64,
+    "images_per_class": 600,
+    "prep_runs": 3,
+    "runs": 5,
+    "transfer_reps": 5,
+    "targets": [
+      "cpu",
+      "gpu_directo",
+      "gpu_optimizado"
+    ],
+    "npz": "C:\\Users\\rjbar\\datasets\\p3_work\\asl_prepared.npz",
+    "amp": false,
+    "cudnn_benchmark_en_gpu": true,
+    "huella_datos": "dd227094d7f645a91757911ed4baa1716059caaa7579ef4997e8df56e5691b61",
+    "imagenes": {
+      "train": 12180,
+      "val": 2610,
+      "test": 2610
+    },
+    "duracion_total_s": 1885.4
+  }
+}

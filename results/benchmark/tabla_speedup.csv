@@ -1,0 +1,10 @@
+fase,objetivo,speedup
+Entrenamiento,gpu_directo,19.13533319368225
+Prueba,gpu_directo,16.924750556990535
+Pipeline completo,gpu_directo,5.080443692505239
+Pipeline según Amdahl,gpu_directo,5.082052999843028
+Entrenamiento,gpu_optimizado,21.92152860429672
+Prueba,gpu_optimizado,16.151913882361878
+Pipeline completo,gpu_optimizado,5.222139306833643
+Pipeline según Amdahl,gpu_optimizado,5.231724355451996
+Límite de Amdahl,cualquiera,6.558235742037616

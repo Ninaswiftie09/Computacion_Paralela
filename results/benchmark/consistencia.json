@@ -1,0 +1,33 @@
+{
+  "huella_preparacion_identica": true,
+  "cpu": {
+    "test_acc_media": 0.9934865900383143,
+    "test_acc_min": 0.9934865900383142,
+    "test_acc_max": 0.9934865900383142,
+    "val_acc_final_media": 0.9927203065134101,
+    "diferencia_test_acc_contra_cpu": 0.0,
+    "cv_entrenamiento_pct": 9.50575890383439,
+    "corridas_atipicas": [],
+    "memoria_pico_mb": 0.0
+  },
+  "gpu_directo": {
+    "test_acc_media": 0.9891187739463602,
+    "test_acc_min": 0.9823754789272032,
+    "test_acc_max": 0.9950191570881226,
+    "val_acc_final_media": 0.9898850574712643,
+    "diferencia_test_acc_contra_cpu": -0.004367816091954135,
+    "cv_entrenamiento_pct": 0.7119017077961475,
+    "corridas_atipicas": [],
+    "memoria_pico_mb": 438.82958984375
+  },
+  "gpu_optimizado": {
+    "test_acc_media": 0.979080459770115,
+    "test_acc_min": 0.9701149425287356,
+    "test_acc_max": 0.9877394636015324,
+    "val_acc_final_media": 0.9802298850574713,
+    "diferencia_test_acc_contra_cpu": -0.014406130268199258,
+    "cv_entrenamiento_pct": 1.2982655625682953,
+    "corridas_atipicas": [],
+    "memoria_pico_mb": 1379.4111328125
+  }
+}
