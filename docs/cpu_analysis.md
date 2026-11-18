@@ -1,72 +1,78 @@
-# Análisis de la solución secuencial y preparación en CPU
+# Análisis de la solución secuencial y procesamiento en CPU
 
-## Flujo de procesamiento
+## 1. Descripción general
 
-La solución clasifica imágenes del alfabeto ASL en 29 clases. La preparación de datos se realiza en CPU y produce tres conjuntos reproducibles: entrenamiento, validación y prueba. El modelo de referencia es una red convolucional CNN2; utiliza la misma arquitectura, función de pérdida y parámetros de entrenamiento que la evaluación con CUDA.
+Se utilizó el conjunto de imágenes ASL Alphabet para clasificar 29 señas. Las imágenes se seleccionaron y prepararon en CPU antes de entrenar la red convolucional CNN2. Se trabajó con 600 imágenes por clase, para un total de **17,400 imágenes**, divididas en entrenamiento (12,180), validación (2,610) y prueba (2,610).
 
-| No. | Operación identificada | Descripción |
-| --- | --- | --- |
-| 1 | Selección de imágenes | Identifica los archivos por clase y selecciona una submuestra reproducible con semilla 42. |
-| 2 | División de datos | Organiza las imágenes en entrenamiento (70 %), validación (15 %) y prueba (15 %), por clase. |
-| 3 | Lectura y decodificación | Abre archivos JPG mediante Pillow en la CPU. |
-| 4 | Preparación de imágenes | Convierte las imágenes a RGB y las redimensiona a 64 × 64 píxeles. |
-| 5 | Normalización | Transforma los píxeles a valores entre −1 y 1 y utiliza el orden de canales NCHW. |
-| 6 | Almacenamiento | Guarda imágenes y etiquetas en un archivo NPZ compartido por las ejecuciones CPU y GPU. |
-| 7 | Entrenamiento CNN2 | Ejecuta propagación hacia adelante, cálculo de pérdida y retropropagación en el dispositivo seleccionado. |
-| 8 | Evaluación | Calcula métricas de validación durante cada época y exactitud de prueba al finalizar. |
+## 2. Operaciones identificadas
 
-## Operaciones repetitivas
+| No. | Operación | Descripción |
+|---|---|---|
+| 1 | Selección y división | Se seleccionaron imágenes por clase con semilla 42 y se distribuyeron en conjuntos 70 % / 15 % / 15 %. |
+| 2 | Lectura | Se abrieron y decodificaron los archivos de imagen. |
+| 3 | Preprocesamiento | Se convirtieron las imágenes a RGB y se ajustaron a 64 × 64 píxeles. |
+| 4 | Normalización | Se transformaron los píxeles a valores entre −1 y 1, en formato `float32` y orden NCHW. |
+| 5 | Almacenamiento | Se guardaron imágenes y etiquetas en `results/asl_prepared.npz`. |
+| 6 | Entrenamiento | Se ejecutaron propagación hacia adelante, cálculo de pérdida y actualización de pesos de CNN2 en CPU. |
+| 7 | Validación y prueba | Se evaluó el modelo durante cada época y al finalizar el entrenamiento. |
 
-Sea **N** el número de imágenes seleccionadas, **Ntrain**, **Nval** y **Ntest** sus cantidades por conjunto, **E** el número de épocas y **B** el tamaño del lote. Las cantidades exactas deben tomarse del archivo de resultados generado durante la ejecución.
+### Operaciones repetitivas
 
-| Operación repetitiva | Datos que procesa | Repeticiones |
-| --- | --- | --- |
-| Lectura, conversión RGB y redimensionamiento | Imágenes seleccionadas | N por ejecución de preparación |
-| Normalización de píxeles | Imágenes de 64 × 64 × 3 | N por ejecución de preparación |
-| Propagación hacia adelante y retropropagación | Lotes de entrenamiento | E × ceil(Ntrain / B) por entrenamiento |
-| Evaluación de validación | Lotes de validación | E × ceil(Nval / B) por entrenamiento |
-| Evaluación final | Lotes de prueba | ceil(Ntest / B) por entrenamiento |
+| Operación | Datos procesados | Repeticiones por ejecución |
+|---|---|---:|
+| Lectura, ajuste y normalización | 17,400 imágenes | 17,400 en cada preparación |
+| Entrenamiento por lotes | 12,180 imágenes, lotes de 64 | 191 lotes × 10 épocas = 1,910 |
+| Validación | 2,610 imágenes, lotes de 64 | 41 lotes × 10 épocas = 410 |
+| Evaluación final | 2,610 imágenes, lotes de 64 | 41 lotes |
 
-## Configuración de referencia
+## 3. Configuración y procedimiento
 
-- Datos: ASL Alphabet, máximo de 600 imágenes por clase.
-- Clases: 29.
-- Resolución: 64 × 64 píxeles, RGB.
-- Semilla para la selección: 42.
-- División de conjuntos: 70 % / 15 % / 15 %.
-- Formato compartido: `float32`, NCHW, normalización `((píxel / 255) - 0.5) / 0.5`.
-- Modelo: CNN2 de `src/gpu_training.py` (convoluciones, BatchNorm, ReLU, MaxPool, capas densas y Dropout).
-- Configuración de entrenamiento: Adam, aprendizaje 0.001, CrossEntropyLoss, 10 épocas y lote de 64, salvo que se documenten cambios en las pruebas.
+Se utilizó la CNN2 definida en `src/gpu_training.py`, con optimizador Adam, tasa de aprendizaje de 0.001, función de pérdida `CrossEntropyLoss`, tamaño de lote de 64 y semilla 42. El conjunto de datos se preparó tres veces con los mismos parámetros. Después, se realizó un calentamiento de una época, que no se incluyó en las mediciones, y **cinco ejecuciones completas de entrenamiento en CPU**, con diez épocas cada una.
 
-## Procedimiento de medición
+Se registraron los tiempos de selección, procesamiento y guardado del conjunto de imágenes. Para el entrenamiento se midieron la duración por época, el tiempo de entrenamiento y el tiempo total, además de la exactitud de validación.
 
-1. Preparar el conjunto de imágenes varias veces usando las mismas condiciones y registrar por separado selección, preparación y escritura.
-2. Usar el NPZ preparado en todos los entrenamientos para evitar diferencias entre conjuntos de datos.
-3. Ejecutar un calentamiento de una época, excluido de las mediciones.
-4. Realizar cinco entrenamientos de referencia en CPU con la misma configuración del entrenamiento GPU.
-5. Registrar tiempos de configuración, entrenamiento, evaluación y total; calcular media y desviación estándar.
-6. Guardar los registros CSV y JSON y capturar el monitor de uso de CPU durante una ejecución real.
+## 4. Resultados
 
-## Resultados
+### 4.1. Preparación de imágenes en CPU
 
-Completar únicamente con mediciones reales obtenidas en el equipo de prueba.
+| Ejecución | Selección (s) | Preparación (s) | Guardado (s) | Total (s) |
+|---|---:|---:|---:|---:|
+| 1 | 6.574 | 308.447 | 151.772 | 466.793 |
+| 2 | 16.725 | 66.400 | 149.837 | 232.962 |
+| 3 | 17.210 | 64.299 | 19,809.756 | 19,891.265 |
+| **Promedio** | **13.503** | **146.382** | **6,703.788** | **6,863.673** |
 
-| Medición | Promedio (s) | Desviación estándar (s) |
-| --- | ---: | ---: |
-| Selección de imágenes | Pendiente | Pendiente |
-| Preparación de imágenes | Pendiente | Pendiente |
-| Escritura del NPZ | Pendiente | Pendiente |
-| Entrenamiento CPU | Pendiente | Pendiente |
-| Evaluación final CPU | Pendiente | Pendiente |
-| Tiempo total CPU | Pendiente | Pendiente |
+La preparación de imágenes fue más rápida en las ejecuciones segunda y tercera. Sin embargo, el guardado de la tercera ejecución tuvo una demora extraordinaria. Por ese motivo, el promedio total está muy afectado por ese valor y no representa un tiempo habitual de preparación. Se conservaron las tres mediciones y no se atribuyó la demora a una causa específica sin evidencia adicional.
 
-## Decisiones técnicas
+### 4.2. Entrenamiento CNN2 en CPU
 
-La CPU se utiliza para la lectura de archivos, decodificación y preparación de las imágenes, porque estas tareas combinan operaciones de entrada/salida, transformaciones y gestión de archivos. El entrenamiento de referencia en CPU conserva el modelo y las condiciones que se usarán para la comparación con CUDA. Los datos preparados se comparten para que las diferencias observadas correspondan principalmente al dispositivo y a los costos asociados a su ejecución. La aceleración y sus limitaciones se analizarán al disponer de los resultados medidos en GPU.
+| Ejecución | Entrenamiento (s, aprox.) |
+|---|---:|
+| 1 | 1,183.52 |
+| 2 | 762.63 |
+| 3 | 1,261.88 |
+| 4 | 775.26 |
+| 5 | 1,128.08 |
+| **Promedio** | **1,022.27** |
 
-## Evidencias que deben incorporarse
+Los tiempos individuales se aproximaron mediante la suma de las épocas mostradas en el registro. El resumen generado por el programa reportó **1,022.273 segundos** como tiempo promedio de entrenamiento y **1,030.721 segundos** como tiempo total promedio, incluyendo configuración y evaluación. La desviación estándar aproximada del tiempo de entrenamiento fue de **236.13 segundos**.
 
-- Registro de preparación: `results/cpu_preprocessing_times.csv` y `results/cpu_preprocessing_times.json`.
-- Registro de entrenamiento: `results/cpu_training_times.csv` y `results/cpu_training_times.json`.
-- Captura del Administrador de tareas durante el entrenamiento CPU, mostrando utilización y procesadores lógicos.
-- Registro de consola de ambas ejecuciones y especificaciones del equipo utilizado.
+La exactitud de validación al finalizar la décima época fue de **98.81 %** en las cinco ejecuciones. Esta cifra corresponde a validación y no debe interpretarse como exactitud del conjunto de prueba.
+
+### 4.3. Interpretación
+
+Se observó que los tiempos variaron aun cuando se mantuvieron los mismos datos y parámetros. La mayor diferencia apareció en la cuarta época de la tercera ejecución, que tardó 530.68 segundos. Estas variaciones podrían relacionarse con la carga del equipo y otros procesos del sistema, aunque no se identificó una causa definitiva. Por ello, se utilizó el promedio de las cinco ejecuciones y se conservaron los registros originales.
+
+## 5. Decisiones técnicas y conclusión
+
+Se asignaron a CPU la lectura, decodificación, redimensionamiento y normalización de imágenes porque estas tareas requieren gestionar archivos y preparar los datos antes del entrenamiento. El resultado se guardó en un archivo NPZ reutilizable para mantener el mismo conjunto de imágenes en las pruebas posteriores.
+
+La versión CPU permite establecer una referencia de tiempo con la misma CNN2 y configuración previstas para CUDA. **El cálculo de aceleración (speedup) queda pendiente de disponer de las mediciones de GPU**; no se puede concluir todavía que CUDA haya reducido el tiempo de ejecución.
+
+## 6. Evidencias
+
+- `results/asl_split_manifest.csv`: distribución de imágenes.
+- `results/cpu_preprocessing_times.csv` y `.json`: mediciones de preparación.
+- `results/cpu_training_times.csv` y `.json`: mediciones de entrenamiento.
+- `evidence/cpu_training.log`: registro de las cinco ejecuciones.
+- `evidence/cpu_usage.png`: captura del uso de CPU durante el entrenamiento, **si fue tomada**.
